@@ -1,0 +1,1013 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>해니크/리뷰해니 대시보드</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<style>
+/* =========================================================
+   색상·디자인 토큰 (라이트 / 다크 모드)
+   ========================================================= */
+:root{
+  color-scheme: light;
+  --bg:#f5f5f3; --surface:#ffffff; --surface-2:#f0f0ed; --line:#e4e3df; --grid:#ecebe7;
+  --ink:#141413; --ink-2:#55544f; --ink-3:#8a8983;
+  --accent:#2a78d6; --accent-soft:#e6f0fb;
+  --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s4:#eda100; --s5:#e87ba4; --s6:#008300; --s7:#6250d6; --s8:#e34948;
+  --good:#0f7b3f; --good-bg:#e3f4ea; --warn:#9a6200; --warn-bg:#fdf1d8; --bad:#b42323; --bad-bg:#fbe5e5; --mute-bg:#efeeea;
+  --ad:#eb6834; --ad-bg:#fdece4;
+  --radius:14px; --shadow:0 1px 2px rgba(20,20,19,.05),0 4px 16px rgba(20,20,19,.04);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme: dark;
+    --bg:#121211; --surface:#1b1b1a; --surface-2:#242422; --line:#2f2f2c; --grid:#2a2a28;
+    --ink:#f0efec; --ink-2:#c3c2b7; --ink-3:#8f8e86;
+    --accent:#3987e5; --accent-soft:#1d2a3b;
+    --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; --s5:#d55181; --s6:#008300; --s7:#9085e9; --s8:#e66767;
+    --good:#5fd08e; --good-bg:#183324; --warn:#f0bb52; --warn-bg:#3a2c10; --bad:#f08a8a; --bad-bg:#3d1c1c; --mute-bg:#2a2a28;
+    --ad:#f08a5d; --ad-bg:#3a2218;
+    --shadow:none;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --bg:#121211; --surface:#1b1b1a; --surface-2:#242422; --line:#2f2f2c; --grid:#2a2a28;
+  --ink:#f0efec; --ink-2:#c3c2b7; --ink-3:#8f8e86;
+  --accent:#3987e5; --accent-soft:#1d2a3b;
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; --s5:#d55181; --s6:#008300; --s7:#9085e9; --s8:#e66767;
+  --good:#5fd08e; --good-bg:#183324; --warn:#f0bb52; --warn-bg:#3a2c10; --bad:#f08a8a; --bad-bg:#3d1c1c; --mute-bg:#2a2a28;
+  --ad:#f08a5d; --ad-bg:#3a2218;
+  --shadow:none;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{
+  background:var(--bg); color:var(--ink);
+  font-family:"Pretendard Variable",Pretendard,-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
+  font-size:14px; line-height:1.5; -webkit-font-smoothing:antialiased;
+}
+button,input,select{font:inherit;color:inherit}
+a{color:var(--accent)}
+.num{font-variant-numeric:tabular-nums}
+
+/* ---------- 비밀번호 화면 ---------- */
+#gate[hidden],#app[hidden]{display:none}
+#gate{min-height:100vh;display:grid;place-items:center;padding:24px 16px}
+.gate-card{width:100%;max-width:380px;background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:32px 28px;box-shadow:var(--shadow)}
+.gate-card .lock{width:44px;height:44px;border-radius:12px;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;margin-bottom:18px}
+.gate-card h1{font-size:20px;margin:0 0 6px;letter-spacing:-.02em}
+.gate-card p{margin:0 0 20px;color:var(--ink-2);font-size:13px}
+.gate-card input{width:100%;padding:12px 14px;border-radius:10px;border:1px solid var(--line);background:var(--surface-2);outline:none}
+.gate-card input:focus{border-color:var(--accent)}
+.gate-card button{width:100%;margin-top:10px;padding:12px;border:0;border-radius:10px;background:var(--accent);color:#fff;font-weight:600;cursor:pointer}
+.gate-err{color:var(--bad);font-size:13px;min-height:20px;margin-top:10px}
+
+/* ---------- 상단 ---------- */
+header.top{position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.top-inner{max-width:1280px;margin:0 auto;padding:14px 20px 0;display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px}
+.brand{font-weight:700;font-size:17px;letter-spacing:-.02em;margin-right:auto}
+.brand small{display:block;font-weight:500;font-size:12px;color:var(--ink-3);letter-spacing:0}
+.sync{font-size:12px;color:var(--ink-3)}
+.btn{border:1px solid var(--line);background:var(--surface);padding:7px 12px;border-radius:9px;cursor:pointer;font-size:13px}
+.btn:hover{border-color:var(--ink-3)}
+nav.tabs{max-width:1280px;margin:0 auto;padding:0 20px;display:flex;gap:4px;overflow-x:auto;scrollbar-width:none}
+nav.tabs::-webkit-scrollbar{display:none}
+nav.tabs button{border:0;background:none;padding:12px 12px 11px;cursor:pointer;color:var(--ink-2);font-weight:600;border-bottom:2px solid transparent;white-space:nowrap}
+nav.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--ink)}
+
+main{max-width:1280px;margin:0 auto;padding:20px 20px 60px}
+.panel[hidden]{display:none}
+h2.sec{font-size:15px;margin:28px 0 12px;letter-spacing:-.01em}
+.sub{color:var(--ink-3);font-size:12px;font-weight:500}
+
+/* ---------- KPI 카드 ---------- */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px;box-shadow:var(--shadow)}
+.kpi .k-label{font-size:12px;color:var(--ink-2);font-weight:600}
+.kpi .k-value{font-size:26px;font-weight:700;letter-spacing:-.03em;margin-top:6px;line-height:1.2}
+.kpi .k-sub{font-size:12px;color:var(--ink-3);margin-top:4px}
+.kpi.hero{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.kpi.hero .k-label,.kpi.hero .k-sub{color:color-mix(in srgb,var(--bg) 70%,transparent)}
+
+/* ---------- 카드 / 그리드 ---------- */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:18px;box-shadow:var(--shadow);min-width:0}
+.card h3{font-size:14px;margin:0 0 2px;letter-spacing:-.01em}
+.card .desc{font-size:12px;color:var(--ink-3);margin:0 0 14px}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:12px}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:12px}
+@media (max-width:960px){.grid3{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:760px){.grid2,.grid3{grid-template-columns:minmax(0,1fr)}}
+
+/* ---------- 차트 ---------- */
+.chart{width:100%;position:relative}
+.chart svg{display:block;width:100%;overflow:visible}
+.chart text{fill:var(--ink-3);font-size:11px}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;margin:0 0 10px;font-size:12px;color:var(--ink-2)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.hit{fill:transparent;cursor:default}
+.hit:hover{fill:var(--ink);fill-opacity:.04}
+.hbars{display:flex;flex-direction:column;gap:8px}
+.hrow{display:grid;grid-template-columns:minmax(70px,34%) 1fr auto;align-items:center;gap:10px;font-size:12px}
+.hrow .hl{color:var(--ink-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hrow .ht{height:14px;background:var(--surface-2);border-radius:4px;overflow:hidden}
+.hrow .hb{height:100%;border-radius:0 4px 4px 0;min-width:2px}
+.hrow .hv{color:var(--ink);font-weight:600;min-width:44px;text-align:right}
+.hrow.clickable{cursor:pointer}
+.hrow.clickable:hover .hl{color:var(--ink)}
+#tip{position:fixed;z-index:50;pointer-events:none;background:var(--ink);color:var(--bg);font-size:12px;padding:8px 10px;border-radius:8px;max-width:260px;opacity:0;transition:opacity .1s;white-space:pre-line;line-height:1.45}
+
+/* ---------- 상태 / 알림 ---------- */
+.notice{border:1px dashed var(--line);border-radius:var(--radius);padding:18px;background:var(--surface);margin-bottom:16px}
+.notice.err{border-color:var(--bad);background:var(--bad-bg)}
+.notice h3{margin:0 0 6px;font-size:14px}
+.notice p{margin:4px 0;color:var(--ink-2);font-size:13px}
+.notice label.file{display:inline-block;margin-top:10px}
+.loading{padding:40px;text-align:center;color:var(--ink-3)}
+.check{margin-top:24px;border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;background:var(--surface);font-size:12px;color:var(--ink-2)}
+.check b{color:var(--ink)}
+.check ul{margin:6px 0 0;padding-left:18px}
+.ok{color:var(--good);font-weight:700}
+.ng{color:var(--bad);font-weight:700}
+.src{font-size:12px;color:var(--ink-3);margin:0 0 14px}
+
+.badge{display:inline-block;font-size:11px;font-weight:600;padding:2px 8px;border-radius:999px;white-space:nowrap;background:var(--mute-bg);color:var(--ink-2)}
+.b-good{background:var(--good-bg);color:var(--good)}
+.b-warn{background:var(--warn-bg);color:var(--warn)}
+.b-bad{background:var(--bad-bg);color:var(--bad)}
+.b-ad{background:var(--ad-bg);color:var(--ad)}
+.b-blue{background:var(--accent-soft);color:var(--accent)}
+
+/* ---------- 필터 ---------- */
+.filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px}
+.chip{border:1px solid var(--line);background:var(--surface);padding:5px 11px;border-radius:999px;cursor:pointer;font-size:12px;display:inline-flex;align-items:center;gap:6px}
+.chip i{width:8px;height:8px;border-radius:50%}
+.chip[aria-pressed="false"]{opacity:.45}
+.chip[aria-pressed="true"]{border-color:var(--ink-3)}
+.search{padding:7px 12px;border-radius:9px;border:1px solid var(--line);background:var(--surface);min-width:0;flex:1 1 180px;max-width:320px}
+select.sel{padding:7px 10px;border-radius:9px;border:1px solid var(--line);background:var(--surface)}
+.toggle{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--ink-2);cursor:pointer}
+
+/* ---------- 주간 보드 ---------- */
+.weeknav{display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.weeknav .wk{font-weight:700;margin-right:auto}
+.board{display:grid;grid-template-columns:132px repeat(7,minmax(0,1fr));border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;background:var(--surface)}
+.board > div{border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:8px;min-width:0;font-size:12px}
+.board .bh{background:var(--surface-2);font-weight:600;color:var(--ink-2);text-align:center;padding:8px 4px}
+.board .bh.today{background:var(--accent);color:#fff}
+.board .bh.we{color:var(--bad)}
+.board .bh.today.we{color:#fff}
+.board .lane{background:var(--surface-2);font-weight:600;font-size:12px}
+.board .lane small{display:block;font-weight:500;color:var(--ink-3)}
+.board .lane .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px}
+.board .cell.today{background:var(--accent-soft)}
+.board .issue{background:color-mix(in srgb,var(--s4) 10%,var(--surface))}
+.ev{white-space:pre-line;word-break:keep-all;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;color:var(--ink)}
+.ev.ad{color:var(--ad);font-weight:600}
+.daylist{display:none}
+.day{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:14px;margin-bottom:10px}
+.day.today{border-color:var(--accent)}
+.day h4{margin:0 0 8px;font-size:14px}
+.day .row{display:grid;grid-template-columns:92px 1fr;gap:8px;padding:6px 0;border-top:1px solid var(--line);font-size:13px}
+.day .row:first-of-type{border-top:0}
+.day .row .ch{color:var(--ink-3);font-size:12px}
+.day .empty{color:var(--ink-3);font-size:12px}
+@media (max-width:860px){.board{display:none}.daylist{display:block}}
+
+.tl{list-style:none;margin:0;padding:0}
+.tl li{display:grid;grid-template-columns:86px 1fr auto;gap:10px;padding:10px 0;border-top:1px solid var(--line);align-items:start;font-size:13px}
+.tl li:first-child{border-top:0}
+.tl .d{color:var(--ink-2);font-weight:600}
+.tl .t{white-space:pre-line;word-break:keep-all;overflow-wrap:anywhere}
+.tl .c{display:block;color:var(--ink-3);font-size:12px}
+.tl li.past{opacity:.55}
+.scrollbox{max-height:420px;overflow:auto}
+
+/* ---------- 표 ---------- */
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface)}
+table.t{width:100%;border-collapse:collapse;font-size:13px;min-width:720px}
+table.t th{text-align:left;font-weight:600;color:var(--ink-2);background:var(--surface-2);padding:10px 12px;position:sticky;top:0;white-space:nowrap;font-size:12px}
+table.t td{padding:10px 12px;border-top:1px solid var(--line);vertical-align:top}
+table.t td.r,table.t th.r{text-align:right}
+table.t td .muted{color:var(--ink-3);font-size:12px;white-space:pre-line}
+.tablewrap.tall{max-height:560px;overflow:auto}
+.count{font-size:12px;color:var(--ink-3);margin:8px 2px 0}
+
+/* ---------- 아이템 카드 ---------- */
+.items{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px;margin-top:12px}
+@media (max-width:420px){.items{grid-template-columns:minmax(0,1fr)}}
+.item{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:18px;display:flex;flex-direction:column;gap:10px}
+.item h4{margin:0;font-size:15px;letter-spacing:-.01em;line-height:1.4}
+.item .concept{font-size:12px;color:var(--accent);font-weight:600}
+.item .meta{font-size:12px;color:var(--ink-2)}
+.item .meta b{color:var(--ink-3);font-weight:600;margin-right:4px}
+.tags{display:flex;flex-wrap:wrap;gap:6px}
+.tag{font-size:11px;padding:3px 8px;border-radius:999px;background:var(--surface-2);color:var(--ink-2);border:0;cursor:pointer}
+.tag.on{background:var(--accent);color:#fff}
+details.more summary{cursor:pointer;font-size:12px;color:var(--ink-3)}
+details.more p{white-space:pre-line;font-size:13px;color:var(--ink-2);margin:8px 0 0}
+details.more b{display:block;font-size:12px;color:var(--ink);margin-top:10px}
+</style>
+</head>
+<body>
+
+<!-- ================= 비밀번호 화면 ================= -->
+<section id="gate">
+  <form class="gate-card" id="gateForm" autocomplete="off">
+    <div class="lock" aria-hidden="true">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+    </div>
+    <h1 id="gateTitle">대시보드</h1>
+    <p>내부 전용 페이지입니다. 비밀번호를 입력해 주세요.</p>
+    <input type="password" id="pw" placeholder="비밀번호" aria-label="비밀번호" required>
+    <button type="submit">들어가기</button>
+    <div class="gate-err" id="gateErr" role="alert"></div>
+  </form>
+</section>
+
+<!-- ================= 대시보드 ================= -->
+<div id="app" hidden>
+  <header class="top">
+    <div class="top-inner">
+      <div class="brand"><span id="appTitle"></span><small>Google 시트 실시간 연동</small></div>
+      <span class="sync" id="sync">불러오는 중…</span>
+      <button class="btn" id="refreshBtn" type="button">↻ 새로고침</button>
+      <button class="btn" id="logoutBtn" type="button">잠금</button>
+    </div>
+    <nav class="tabs" id="tabs" role="tablist"></nav>
+  </header>
+  <main id="main"></main>
+</div>
+<div id="tip" role="tooltip"></div>
+
+<script>
+/* =====================================================================
+   ★ 설정 영역 — 다른 크리에이터용 대시보드를 만들 때는 여기만 바꾸면 됩니다.
+   ---------------------------------------------------------------------
+   - title        : 화면 제목
+   - passwordHash : 비밀번호의 SHA-256 값 (비밀번호 원문은 코드에 넣지 않음)
+   - tabs         : 메뉴 순서대로. 첫 번째가 메인 페이지.
+                    type 은 schedule / revenue / inquiries / items 중 하나
+                    url  은 구글 시트 '웹에 게시' → CSV 링크
+   ===================================================================== */
+const CONFIG = {
+  title: '해니크/리뷰해니 대시보드',
+  passwordHash: '8e9ad3aa0b18713456bed8cbc0b617dbc96b5564f578f4945eef25b2f00b248c',
+  refreshMinutes: 5,
+  tabs: [
+    { id:'schedule',  type:'schedule',  label:'📅 스케줄',
+      url:'https://docs.google.com/spreadsheets/d/e/2PACX-1vSjabMqU7vJx-eg5WPxBLYYcq-9H-9z0-bnJOKQY1HhdTvTNiVXTnegZHUYDrosE2OK6Cf4Khu2g1w7/pub?gid=148833632&single=true&output=csv' },
+    { id:'inquiries', type:'inquiries', label:'📨 광고 인입 현황',
+      url:'https://docs.google.com/spreadsheets/d/e/2PACX-1vSjabMqU7vJx-eg5WPxBLYYcq-9H-9z0-bnJOKQY1HhdTvTNiVXTnegZHUYDrosE2OK6Cf4Khu2g1w7/pub?gid=1016899569&single=true&output=csv' },
+    { id:'revenue',   type:'revenue',   label:'💰 광고 확정 진행건',
+      url:'https://docs.google.com/spreadsheets/d/e/2PACX-1vSjabMqU7vJx-eg5WPxBLYYcq-9H-9z0-bnJOKQY1HhdTvTNiVXTnegZHUYDrosE2OK6Cf4Khu2g1w7/pub?gid=1181915367&single=true&output=csv' },
+    { id:'items',     type:'items',     label:'💡 아이템 리스트',
+      url:'https://docs.google.com/spreadsheets/d/e/2PACX-1vSjabMqU7vJx-eg5WPxBLYYcq-9H-9z0-bnJOKQY1HhdTvTNiVXTnegZHUYDrosE2OK6Cf4Khu2g1w7/pub?gid=2124490289&single=true&output=csv' },
+  ],
+};
+/* ===================================================================== */
+
+const AUTH_KEY = 'dash_auth_' + location.pathname;
+const SERIES = ['--s1','--s2','--s3','--s4','--s5','--s6','--s7','--s8'];
+const state = { active: null, data: {}, lastSync: null, timer: null };
+const $ = (s, r=document) => r.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const cssVar = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const won = n => '₩' + Math.round(n).toLocaleString('ko-KR');
+const manwon = n => {
+  if (Math.abs(n) >= 1e8) return (n/1e8).toFixed(n % 1e8 ? 2 : 0).replace(/\.?0+$/,'') + '억원';
+  if (Math.abs(n) >= 1e4) return Math.round(n/1e4).toLocaleString('ko-KR') + '만원';
+  return Math.round(n).toLocaleString('ko-KR') + '원';
+};
+const shortNum = n => n >= 1e8 ? (n/1e8).toFixed(1).replace(/\.0$/,'')+'억' : n >= 1e4 ? Math.round(n/1e4).toLocaleString('ko-KR')+'만' : String(Math.round(n));
+const pad = n => String(n).padStart(2,'0');
+const ymd = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const ym = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}`;
+const ymLabel = k => { const [y,m] = k.split('-'); return `${y.slice(2)}.${m}`; };
+const WD = '일월화수목금토';
+const md = d => `${d.getMonth()+1}/${d.getDate()}(${WD[d.getDay()]})`;
+const addDays = (d,n) => { const x = new Date(d); x.setDate(x.getDate()+n); return x; };
+const startOfDay = d => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+const today = () => startOfDay(new Date());
+const clean = s => String(s ?? '').replace(/\r/g,'').replace(/[ \t ]+/g,' ').split('\n').map(x=>x.trim()).filter(Boolean).join('\n');
+const oneLine = s => clean(s).replace(/\n/g,' ');
+const norm = s => oneLine(s).replace(/\s/g,'');
+
+/* =====================================================================
+   1) CSV 파서 — 따옴표 안의 줄바꿈·쉼표(구글 시트 셀 안 줄바꿈)를 정확히 처리
+   ===================================================================== */
+function parseCSV(text){
+  const rows = []; let row = [], f = '', q = false;
+  for (let i = 0; i < text.length; i++){
+    const c = text[i];
+    if (q){
+      if (c === '"'){ if (text[i+1] === '"'){ f += '"'; i++; } else q = false; }
+      else f += c;
+    } else if (c === '"') q = true;
+    else if (c === ','){ row.push(f); f = ''; }
+    else if (c === '\n'){ row.push(f); rows.push(row); row = []; f = ''; }
+    else if (c !== '\r') f += c;
+  }
+  if (f !== '' || row.length){ row.push(f); rows.push(row); }
+  return rows;
+}
+
+/* 한글 인코딩: 구글 CSV는 UTF-8. 엑셀에서 저장한 파일(CP949/EUC-KR)도 자동 판별 */
+function decodeKorean(buf){
+  let t = new TextDecoder('utf-8').decode(buf);
+  const broken = (t.match(/�/g) || []).length;
+  if (broken > 3){ try { t = new TextDecoder('euc-kr').decode(buf); } catch(e){} }
+  return t.replace(/^﻿/, '');
+}
+
+/* =====================================================================
+   2) 데이터 불러오기 (CORS·네트워크·게시 오류 구분)
+   ===================================================================== */
+async function fetchSheet(tab){
+  if (!tab.url) throw { kind:'nolink' };
+  const ctrl = new AbortController(); const to = setTimeout(() => ctrl.abort(), 20000);
+  let res;
+  try {
+    const u = tab.url + (tab.url.includes('?') ? '&' : '?') + '_t=' + Date.now(); // 캐시 우회
+    res = await fetch(u, { cache:'no-store', signal: ctrl.signal, redirect:'follow' });
+  } catch(e){
+    clearTimeout(to);
+    throw { kind: e.name === 'AbortError' ? 'timeout' : 'cors', detail: String(e) };
+  }
+  clearTimeout(to);
+  if (!res.ok) throw { kind:'http', detail: res.status };
+  const text = decodeKorean(await res.arrayBuffer());
+  if (/^\s*<(!doctype|html)/i.test(text)) throw { kind:'notcsv' };
+  return text;
+}
+
+const ERR_MSG = {
+  nolink: ['CSV 링크가 아직 없어요', '코드 맨 위 CONFIG에서 이 탭의 url 칸에 구글 시트 “웹에 게시 → CSV” 링크를 넣어주세요. 그 전까지는 아래에서 CSV 파일을 직접 올려 미리 볼 수 있어요.'],
+  cors:   ['시트를 불러오지 못했어요 (네트워크 또는 CORS 차단)', '브라우저가 구글 시트 응답을 막았거나 인터넷 연결이 끊겼어요. ① 시트가 “웹에 게시” 상태인지 ② 링크 끝이 output=csv 인지 확인해 주세요. 회사 보안 프로그램이 막는 경우도 있어요.'],
+  timeout:['응답이 너무 오래 걸려요', '잠시 후 새로고침을 눌러주세요.'],
+  http:   ['시트 링크가 오류를 돌려줬어요', '“웹에 게시”가 중지되었거나 링크가 바뀌었을 수 있어요. 시트에서 다시 게시한 뒤 새 링크를 CONFIG에 넣어주세요.'],
+  notcsv: ['CSV가 아닌 웹페이지가 돌아왔어요', '“웹에 게시”에서 형식을 “쉼표로 구분된 값(.csv)”으로 선택했는지 확인해 주세요.'],
+  parse:  ['시트 구조를 읽지 못했어요', '헤더(제목 행) 이름이 바뀌었는지 확인해 주세요.'],
+};
+
+async function loadTab(tab){
+  const prev = state.data[tab.id];
+  if (prev && prev.source === 'file') return; // 직접 올린 파일은 덮어쓰지 않음
+  try {
+    const text = await fetchSheet(tab);
+    state.data[tab.id] = buildData(tab, text, 'web');
+  } catch(e){
+    if (prev && prev.source === 'web' && !prev.error){ prev.stale = true; return; } // 이전 데이터 유지
+    state.data[tab.id] = { error: e.kind || 'parse', detail: e.detail || e.message };
+  }
+}
+function buildData(tab, text, source){
+  const rows = parseCSV(text);
+  const parsed = PARSERS[tab.type](rows);
+  return { source, parsed, rows: rows.length };
+}
+
+async function loadAll(){
+  $('#sync').textContent = '동기화 중…';
+  await Promise.all(CONFIG.tabs.map(loadTab));
+  state.lastSync = new Date();
+  const fails = CONFIG.tabs.filter(t => state.data[t.id]?.error && state.data[t.id].error !== 'nolink').length;
+  $('#sync').textContent = `마지막 동기화 ${pad(state.lastSync.getHours())}:${pad(state.lastSync.getMinutes())}:${pad(state.lastSync.getSeconds())} · ${CONFIG.refreshMinutes}분마다 자동 갱신` + (fails ? ` · ⚠️ ${fails}개 탭 오류` : '');
+  renderActive();
+}
+
+/* =====================================================================
+   3) 시트별 파서 — 병합 셀 / 빈 셀 / 여러 줄 헤더 처리
+   ===================================================================== */
+function findRow(rows, test, from=0){ for (let i = from; i < rows.length; i++) if (test(rows[i] || [])) return i; return -1; }
+function colIndex(header, ...names){
+  const H = header.map(norm);
+  for (const n of names){ const i = H.indexOf(norm(n)); if (i >= 0) return i; }
+  for (const n of names){ const i = H.findIndex(h => h && h.includes(norm(n))); if (i >= 0) return i; }
+  return -1;
+}
+const cell = (r, i) => i >= 0 ? (r[i] ?? '') : '';
+
+const PARSERS = {
+  /* ---------- 스케줄: 가로 달력형 (날짜=열, 채널=행) ---------- */
+  schedule(rows){
+    const dRe = /^\s*(\d{1,2})\/(\d{1,2})\s*$/;
+    const hdr = findRow(rows, r => r.filter(c => dRe.test(c)).length >= 10 && r.some(c => /채널/.test(c)));
+    if (hdr < 0) throw new Error('날짜 헤더 행을 찾지 못함');
+    const dRow = rows[hdr], wRow = rows[hdr+1] || [];
+    const chCol = dRow.findIndex(c => /채널/.test(c));
+    const fmCol = chCol + 1;
+    const first = dRow.findIndex((c,i) => i > fmCol && dRe.test(c));
+    let last = Math.max(dRow.length, wRow.length) - 1;
+    while (last > first && !String(dRow[last]||'').trim() && !String(wRow[last]||'').trim()) last--;
+    // 연도 추론: 첫 날짜의 요일이 맞는 연도 찾기
+    const [, m0, d0] = dRow[first].match(dRe).map(Number);
+    const nowY = new Date().getFullYear(), wd0 = String(wRow[first]||'').trim();
+    let y0 = nowY;
+    for (let y = nowY-3; y <= nowY+1; y++){ if (WD[new Date(y, m0-1, d0).getDay()] === wd0){ y0 = y; break; } }
+    const start = new Date(y0, m0-1, d0);
+    const dateOf = j => addDays(start, j - first);
+    // 검증: 열 위치로 계산한 날짜 vs 시트에 적힌 날짜·요일
+    let mismatch = 0, blankDates = 0;
+    for (let j = first; j <= last; j++){
+      const d = dateOf(j), lab = String(dRow[j]||'').trim(), w = String(wRow[j]||'').trim();
+      if (!lab) blankDates++;
+      else { const mm = lab.match(dRe); if (!mm || +mm[1] !== d.getMonth()+1 || +mm[2] !== d.getDate()) mismatch++; }
+      if (w && w !== WD[d.getDay()]) mismatch++;
+    }
+    // 행(레인) 읽기 — 채널 칸이 비어 있으면 위 채널 이어받기(병합 셀)
+    const lanes = [], events = []; let curCh = '';
+    for (let r = hdr+2; r < rows.length; r++){
+      const row = rows[r] || [];
+      const ch = oneLine(row[chCol]), fm = oneLine(row[fmCol]);
+      if (ch) curCh = ch;
+      let n = 0;
+      for (let j = first; j <= last; j++) if (clean(row[j])) n++;
+      if (!ch && !fm && !n) continue;
+      const lane = { id: lanes.length, channel: ch || curCh || '기타', format: fm, issue: /이슈/.test(ch || curCh) };
+      lanes.push(lane);
+      for (let j = first; j <= last; j++){
+        const v = clean(row[j]); if (!v) continue;
+        events.push({ date: dateOf(j), lane: lane.id, channel: lane.channel, format: fm, issue: lane.issue, text: v,
+          ad: /광고|PPL|CF|공구|공동구매|마켓|협찬|브랜디드/i.test(v) });
+      }
+    }
+    const channels = [...new Set(lanes.filter(l => !l.issue).map(l => l.channel))];
+    return { lanes, events, channels, start, end: dateOf(last), days: last-first+1, mismatch, blankDates };
+  },
+
+  /* ---------- 광고·협찬 문의 ---------- */
+  inquiries(rows){
+    const hdr = findRow(rows, r => r.some(c => norm(c) === '브랜드') && r.some(c => norm(c) === '카테고리'));
+    if (hdr < 0) throw new Error('헤더 없음');
+    const H = rows[hdr], C = {
+      brand: colIndex(H,'브랜드'), cat: colIndex(H,'카테고리'), product: colIndex(H,'제품명'), type: colIndex(H,'형태'),
+      route: colIndex(H,'문의 경로'), channel: colIndex(H,'업로드 채널'), date: colIndex(H,'업로드 요청 일자','요청 일자'),
+      comm: colIndex(H,'소통 현황'), conf: colIndex(H,'진행확정 여부','진행확정'), settle: colIndex(H,'정산 일정'),
+      price: colIndex(H,'진행 단가','단가'), note: colIndex(H,'비고'),
+    };
+    const ads = [], talks = []; let target = ads;
+    for (let r = hdr+1; r < rows.length; r++){
+      const row = rows[r] || [];
+      if (row.some(c => /^\s*\*/.test(c) && /출연|특강|강연/.test(c))){ target = talks; continue; }
+      const brand = oneLine(cell(row,C.brand)), product = oneLine(cell(row,C.product));
+      if (!brand && !product) continue; // 빈 행 / 채널만 적힌 행 제외
+      const rec = {
+        brand, product, cat: oneLine(cell(row,C.cat)) || '미분류', typeRaw: oneLine(cell(row,C.type)),
+        route: oneLine(cell(row,C.route)), channel: normChannel(cell(row,C.channel)),
+        dateRaw: clean(cell(row,C.date)), comm: clean(cell(row,C.comm)), conf: oneLine(cell(row,C.conf)),
+        settle: clean(cell(row,C.settle)), price: clean(cell(row,C.price)), note: clean(cell(row,C.note)),
+        proposal: /선제안/.test(row.slice(0, Math.max(C.brand,1)).join('')),
+      };
+      rec.type = normType(rec.typeRaw, rec.proposal);
+      rec.status = inqStatus(rec);
+      rec.date = parseKDate(rec.dateRaw);
+      target.push(rec);
+    }
+    return { ads, talks };
+  },
+
+  /* ---------- 아이템 리스트 ---------- */
+  items(rows){
+    const hdr = findRow(rows, r => r.some(c => /주제/.test(c)));
+    if (hdr < 0) throw new Error('헤더 없음');
+    const H = rows[hdr], C = {
+      title: colIndex(H,'주제(제목)','주제'), body: colIndex(H,'내용'), intent: colIndex(H,'기획의도'), target: colIndex(H,'타겟'),
+      plot: colIndex(H,'전체 플롯','플롯'), point: colIndex(H,'연출 포인트'), concept: colIndex(H,'컨셉'), kw: colIndex(H,'키워드'),
+    };
+    const items = [];
+    for (let r = hdr+1; r < rows.length; r++){
+      const row = rows[r] || []; const title = oneLine(cell(row,C.title)); if (!title) continue;
+      items.push({ title, body: clean(cell(row,C.body)), intent: clean(cell(row,C.intent)), target: oneLine(cell(row,C.target)),
+        plot: clean(cell(row,C.plot)), point: clean(cell(row,C.point)), concept: oneLine(cell(row,C.concept)),
+        keywords: [...new Set(String(cell(row,C.kw)).split(/[\n,#]/).map(s => s.trim()).filter(Boolean))] });
+    }
+    return { items };
+  },
+
+  /* ---------- 매출(광고확정건) ---------- */
+  revenue(rows){
+    const hdr = findRow(rows, r => r.some(c => norm(c) === '브랜드') && r.some(c => /단가|금액|매출/.test(c)));
+    if (hdr < 0) throw new Error('헤더 없음');
+    const H = rows[hdr], data = rows.slice(hdr+1);
+    // '업로드 채널'이 두 번 있는 경우: URL이 많은 열 = 게시물 링크, 나머지 = 채널명
+    const dup = H.map((h,i) => norm(h) === '업로드채널' ? i : -1).filter(i => i >= 0);
+    const urlShare = i => data.filter(r => /^https?:\/\//.test(String(r[i]||'').trim())).length;
+    let linkCol = -1, chCol = dup[0] ?? -1;
+    if (dup.length >= 2){ const s = [...dup].sort((a,b) => urlShare(b) - urlShare(a)); linkCol = s[0]; chCol = s[1]; }
+    const amtCol = H.findIndex(h => /단가|금액|매출/.test(h));
+    const C = { type: colIndex(H,'유형'), inq: colIndex(H,'문의일'), brand: colIndex(H,'브랜드'), agency: colIndex(H,'대행사'),
+      cat: colIndex(H,'카테고리'), product: colIndex(H,'제품명'), plat: colIndex(H,'요청플랫폼','플랫폼'), date: colIndex(H,'업로드일'),
+      keep: colIndex(H,'게시물 유지기간'), second: colIndex(H,'2차 활용') };
+    const recs = [];
+    for (const row of data){
+      const brand = oneLine(cell(row,C.brand)), product = oneLine(cell(row,C.product));
+      if (!brand && !product) continue;
+      const rawAmt = oneLine(cell(row,amtCol));
+      recs.push({ type: oneLine(cell(row,C.type)) || '기타', brand, product, cat: oneLine(cell(row,C.cat)) || '미분류',
+        channel: normChannel(cell(row,chCol)) || '미기재', plat: oneLine(cell(row,C.plat)), link: String(cell(row,linkCol)).trim(),
+        dateRaw: oneLine(cell(row,C.date)), date: parseDotDate(cell(row,C.date)), inqRaw: oneLine(cell(row,C.inq)),
+        keep: oneLine(cell(row,C.keep)), second: oneLine(cell(row,C.second)), rawAmt, amount: parseAmount(rawAmt) });
+    }
+    return { recs, amountHeader: oneLine(H[amtCol]) };
+  },
+};
+
+function normChannel(s){ const v = oneLine(s); if (!v || v === '업로드 채널' || v === '-') return v === '-' ? '' : (v ? '미정' : ''); return v; }
+function normType(t, proposal){
+  const s = t.replace(/\s/g,'');
+  if (/선제안/.test(s) || (!s && proposal)) return '선제안';
+  if (!s || s === '-') return '미기재';
+  if (/ppl|광고/i.test(s)) return 'PPL';
+  if (/공구|공동구매|마켓/.test(s)) return '공구·마켓';
+  if (/선물|시딩|협찬/.test(s)) return '선물·시딩';
+  return '기타';
+}
+function inqStatus(r){
+  const c = r.conf.toUpperCase();
+  if (c === 'O') return '진행 확정';
+  if (/거절/.test(r.comm) || c === 'X') return '거절·미진행';
+  if (/미정|샘플|테스트/.test(r.conf)) return '검토 중';
+  if (r.comm && r.comm !== '-') return '회신·협의 중';
+  return '미회신';
+}
+const STATUS_CLASS = { '진행 확정':'b-good', '거절·미진행':'b-bad', '검토 중':'b-warn', '회신·협의 중':'b-blue', '미회신':'' };
+function parseKDate(s){
+  const m = String(s).match(/(\d{4})\s*년\s*(\d{1,2})\s*월(?:\s*(\d{1,2})\s*일)?/);
+  if (!m) return null;
+  return new Date(+m[1], +m[2]-1, m[3] ? +m[3] : 1);
+}
+function parseDotDate(s){
+  const m = String(s).match(/(\d{2,4})\s*[.\-\/]\s*(\d{1,2})\s*[.\-\/]\s*(\d{1,2})/);
+  if (!m) return null;
+  const y = +m[1] < 100 ? 2000 + +m[1] : +m[1];
+  return new Date(y, +m[2]-1, +m[3]);
+}
+function parseAmount(s){
+  const t = String(s).replace(/\s/g,'');
+  const man = t.match(/([\d,.]+)만/);
+  if (man) return Math.round(parseFloat(man[1].replace(/,/g,'')) * 10000);
+  const d = t.replace(/[^\d]/g,'');
+  return d ? Number(d) : 0;
+}
+/* 공개 화면에서 연락처·메일·링크 가리기 */
+function mask(s){
+  return String(s)
+    .replace(/https?:\/\/\S+/g, '(링크 비공개)')
+    .replace(/<?[\w.+-]+@[\w-]+\.[\w.-]+>?/g, '(이메일 비공개)')
+    .replace(/\b01[016789][-\s.]?\d{3,4}[-\s.]?\d{4}\b/g, '(연락처 비공개)');
+}
+
+/* =====================================================================
+   4) 차트 (외부 라이브러리 없이 SVG로 직접 그림 — 마우스를 올리면 수치 표시)
+   ===================================================================== */
+const tip = () => $('#tip');
+document.addEventListener('mousemove', e => {
+  const t = e.target.closest?.('[data-tip]');
+  const el = tip();
+  if (!t){ el.style.opacity = 0; return; }
+  el.textContent = t.dataset.tip; el.style.opacity = 1;
+  const w = el.offsetWidth, h = el.offsetHeight;
+  let x = e.clientX + 14, y = e.clientY + 14;
+  if (x + w > innerWidth - 8) x = e.clientX - w - 14;
+  if (y + h > innerHeight - 8) y = e.clientY - h - 14;
+  el.style.left = x + 'px'; el.style.top = y + 'px';
+});
+document.addEventListener('touchstart', e => {
+  const t = e.target.closest?.('[data-tip]'); const el = tip();
+  if (!t){ el.style.opacity = 0; return; }
+  const p = e.touches[0]; el.textContent = t.dataset.tip; el.style.opacity = 1;
+  el.style.left = Math.min(p.clientX, innerWidth - el.offsetWidth - 8) + 'px'; el.style.top = (p.clientY - el.offsetHeight - 16) + 'px';
+}, { passive:true });
+
+function niceMax(v){
+  if (v <= 0) return 1;
+  const raw = v / 4, p = Math.pow(10, Math.floor(Math.log10(raw))), n = raw / p;
+  const step = (n <= 1 ? 1 : n <= 2 ? 2 : n <= 2.5 ? 2.5 : n <= 5 ? 5 : 10) * p;
+  return { max: step * Math.ceil(v / step), step };
+}
+function legendHTML(series){
+  if (series.length < 2) return '';
+  return `<div class="legend">${series.map(s => `<span><i style="background:var(${s.color})"></i>${esc(s.name)}</span>`).join('')}</div>`;
+}
+/* 세로 막대 (단일 / 묶음 / 누적) */
+function vbar(el, { labels, series, stacked=false, fmt=String, height=240, tipLabels }){
+  if (!el) return;
+  const W = Math.max(el.clientWidth || 600, 280), H = height, L = 48, R = 8, T = 10, B = 26;
+  const n = labels.length, pw = W - L - R, ph = H - T - B;
+  const totals = labels.map((_,i) => series.reduce((a,s) => a + (s.values[i]||0), 0));
+  const vmax = stacked ? Math.max(...totals, 0) : Math.max(...series.flatMap(s => s.values), 0);
+  const { max, step } = niceMax(vmax || 1);
+  const y = v => T + ph - (v / max) * ph;
+  const band = pw / Math.max(n,1), gap = Math.min(band * 0.28, 14);
+  const groups = stacked ? 1 : series.length;
+  const bw = Math.max(Math.min((band - gap) / groups, 34), 2);
+  let g = '';
+  for (let v = 0; v <= max + 1e-9; v += step){
+    g += `<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--grid)" stroke-width="1"/>`;
+    g += `<text x="${L-8}" y="${y(v)+4}" text-anchor="end" class="num">${esc(shortNum(v))}</text>`;
+  }
+  const every = Math.ceil(n / Math.max(Math.floor(pw / 46), 1));
+  labels.forEach((lab, i) => {
+    const cx = L + band * i + band / 2;
+    if (i % every === 0) g += `<text x="${cx}" y="${H-8}" text-anchor="middle">${esc(lab)}</text>`;
+    let acc = 0;
+    series.forEach((s, k) => {
+      const v = s.values[i] || 0; if (!v) return;
+      let x, top, bot;
+      if (stacked){ x = cx - bw/2; bot = y(acc); acc += v; top = y(acc); }
+      else { x = cx - (bw*groups)/2 + bw*k; bot = y(0); top = y(v); }
+      const h = Math.max(bot - top, 1), isTop = !stacked || series.slice(k+1).every(s2 => !(s2.values[i]||0));
+      const r = Math.min(4, bw/2, h);
+      const gapPx = stacked && !isTop ? 1 : 0;
+      const yy = top + gapPx, hh = Math.max(h - gapPx, 0.5);
+      g += isTop
+        ? `<path d="M${x},${bot} V${top+r} Q${x},${top} ${x+r},${top} H${x+bw-r} Q${x+bw},${top} ${x+bw},${top+r} V${bot} Z" fill="var(${s.color})" ${stacked?'':`stroke="var(--surface)" stroke-width="${groups>1?1:0}"`}/>`
+        : `<rect x="${x}" y="${yy}" width="${bw}" height="${hh}" fill="var(${s.color})"/>`;
+    });
+    const tl = (tipLabels ? tipLabels[i] : lab);
+    const lines = series.map(s => `${series.length>1 ? s.name + ': ' : ''}${fmt(s.values[i]||0)}`);
+    if (stacked && series.length > 1) lines.push(`합계: ${fmt(totals[i])}`);
+    g += `<rect class="hit" x="${L + band*i}" y="${T}" width="${band}" height="${ph}" data-tip="${esc(tl + '\n' + lines.join('\n'))}"/>`;
+  });
+  g += `<line x1="${L}" x2="${W-R}" y1="${y(0)}" y2="${y(0)}" stroke="var(--ink-3)" stroke-width="1"/>`;
+  el.innerHTML = legendHTML(series) + `<svg viewBox="0 0 ${W} ${H}" height="${H}" role="img">${g}</svg>`;
+}
+/* 선 차트 (누적 등) */
+function linechart(el, { labels, values, fmt=String, color='--s1', height=240, tipLabels }){
+  if (!el) return;
+  const W = Math.max(el.clientWidth || 600, 280), H = height, L = 48, R = 14, T = 14, B = 26;
+  const n = labels.length, pw = W - L - R, ph = H - T - B;
+  const { max, step } = niceMax(Math.max(...values, 0) || 1);
+  const x = i => L + (n === 1 ? pw/2 : (pw * i) / (n - 1));
+  const y = v => T + ph - (v / max) * ph;
+  let g = '';
+  for (let v = 0; v <= max + 1e-9; v += step){
+    g += `<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--grid)"/>`;
+    g += `<text x="${L-8}" y="${y(v)+4}" text-anchor="end" class="num">${esc(shortNum(v))}</text>`;
+  }
+  const every = Math.ceil(n / Math.max(Math.floor(pw / 46), 1));
+  labels.forEach((lab,i) => { if (i % every === 0 || i === n-1) g += `<text x="${x(i)}" y="${H-8}" text-anchor="middle">${esc(lab)}</text>`; });
+  const pts = values.map((v,i) => `${x(i)},${y(v)}`).join(' ');
+  g += `<polygon points="${x(0)},${y(0)} ${pts} ${x(n-1)},${y(0)}" fill="var(${color})" fill-opacity=".08"/>`;
+  g += `<polyline points="${pts}" fill="none" stroke="var(${color})" stroke-width="2" stroke-linejoin="round"/>`;
+  values.forEach((v,i) => { g += `<circle cx="${x(i)}" cy="${y(v)}" r="4" fill="var(${color})" stroke="var(--surface)" stroke-width="2"/>`; });
+  const last = values[n-1];
+  if (n) g += `<text x="${x(n-1)}" y="${y(last)-10}" text-anchor="end" style="fill:var(--ink);font-weight:600" class="num">${esc(fmt(last))}</text>`;
+  const band = n > 1 ? pw / (n - 1) : pw;
+  labels.forEach((lab,i) => { g += `<rect class="hit" x="${x(i)-band/2}" y="${T}" width="${band}" height="${ph}" data-tip="${esc((tipLabels?tipLabels[i]:lab) + '\n' + fmt(values[i]))}"/>`; });
+  g += `<line x1="${L}" x2="${W-R}" y1="${y(0)}" y2="${y(0)}" stroke="var(--ink-3)"/>`;
+  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" height="${H}" role="img">${g}</svg>`;
+}
+/* 가로 막대 (순위·비교) — HTML로 그려서 모바일에서도 글자가 잘 보임 */
+function hbars(el, rows, { fmt=String, color='--s1', limit=10, onClick, active } = {}){
+  if (!el) return;
+  const list = rows.slice(0, limit), max = Math.max(...list.map(r => r.value), 1);
+  if (!list.length){ el.innerHTML = '<div class="sub">데이터가 없어요</div>'; return; }
+  el.innerHTML = `<div class="hbars">${list.map(r => `
+    <div class="hrow ${onClick?'clickable':''}" data-key="${esc(r.label)}" data-tip="${esc(r.label + '\n' + fmt(r.value) + (r.extra ? '\n' + r.extra : ''))}" ${active===r.label?'style="font-weight:700"':''}>
+      <span class="hl">${esc(r.label)}</span>
+      <span class="ht"><span class="hb" style="display:block;width:${(r.value/max*100).toFixed(1)}%;background:var(${r.color||color})"></span></span>
+      <span class="hv num">${esc(fmt(r.value))}</span>
+    </div>`).join('')}</div>` + (rows.length > limit ? `<div class="count">외 ${rows.length - limit}개 항목</div>` : '');
+  if (onClick) el.querySelectorAll('.hrow').forEach(n => n.addEventListener('click', () => onClick(n.dataset.key)));
+}
+const countBy = (arr, key, val = () => 1) => { const m = new Map(); arr.forEach(x => { const k = typeof key === 'function' ? key(x) : x[key]; m.set(k, (m.get(k)||0) + val(x)); }); return m; };
+const toRows = m => [...m].map(([label,value]) => ({ label, value })).sort((a,b) => b.value - a.value);
+function monthRange(a, b){ const out = []; let d = new Date(a.getFullYear(), a.getMonth(), 1); const e = new Date(b.getFullYear(), b.getMonth(), 1); while (d <= e){ out.push(ym(d)); d = new Date(d.getFullYear(), d.getMonth()+1, 1); } return out; }
+const kpi = (label, value, sub='', hero=false) => `<div class="kpi ${hero?'hero':''}"><div class="k-label">${esc(label)}</div><div class="k-value num">${value}</div>${sub?`<div class="k-sub">${sub}</div>`:''}</div>`;
+
+/* =====================================================================
+   5) 화면 그리기
+   ===================================================================== */
+const UI = { weekOffset: 0, chOff: new Set(), adOnly: false, schQ: '', inqQ: '', inqStatus: '', inqType: '', kw: '', revCh: '' };
+
+function renderActive(){
+  const tab = CONFIG.tabs.find(t => t.id === state.active) || CONFIG.tabs[0];
+  const box = $('#panel-' + tab.id);
+  const d = state.data[tab.id];
+  if (!d){ box.innerHTML = '<div class="loading">불러오는 중…</div>'; return; }
+  if (d.error){ box.innerHTML = errorHTML(tab, d); bindFile(tab, box); return; }
+  const srcLine = d.source === 'file'
+    ? `<p class="src">📁 직접 올린 파일로 보는 중 — 자동 갱신되지 않아요. <button class="btn" data-reset="${tab.id}" type="button">시트 연결로 돌아가기</button></p>`
+    : `<p class="src">🔗 구글 시트 실시간 연동${d.stale ? ' · ⚠️ 최근 갱신 실패, 이전 데이터 표시 중' : ''}</p>`;
+  try { RENDER[tab.type](box, d.parsed, srcLine); }
+  catch(e){ console.error(e); box.innerHTML = errorHTML(tab, { error:'parse', detail: e.message }); bindFile(tab, box); }
+  box.querySelector('[data-reset]')?.addEventListener('click', async () => { delete state.data[tab.id]; renderActive(); await loadTab(tab); renderActive(); });
+}
+function errorHTML(tab, d){
+  const [t, p] = ERR_MSG[d.error] || ERR_MSG.parse;
+  return `<div class="notice ${d.error==='nolink'?'':'err'}"><h3>${esc(t)}</h3><p>${esc(p)}</p>${d.detail?`<p class="sub">상세: ${esc(d.detail)}</p>`:''}
+    <label class="file btn">📁 CSV 파일 직접 올리기 <input type="file" accept=".csv,text/csv" hidden></label>
+    <p class="sub">임의 데이터는 표시하지 않아요. 시트에서 파일 → 다운로드 → CSV로 받은 파일을 올리면 이 브라우저에서만 미리 볼 수 있어요.</p></div>`;
+}
+function bindFile(tab, box){
+  box.querySelector('input[type=file]')?.addEventListener('change', async e => {
+    const f = e.target.files[0]; if (!f) return;
+    try { state.data[tab.id] = buildData(tab, decodeKorean(await f.arrayBuffer()), 'file'); }
+    catch(err){ state.data[tab.id] = { error:'parse', detail: err.message }; }
+    renderActive();
+  });
+}
+
+const RENDER = {
+  /* ------------------------- 📅 스케줄 ------------------------- */
+  schedule(box, P, srcLine){
+    const T = today();
+    const chColor = ch => SERIES[P.channels.indexOf(ch) % SERIES.length] || '--ink-3';
+    const pass = e => (e.issue || !UI.chOff.has(e.channel)) && (!UI.adOnly || e.ad || e.issue) && (!UI.schQ || e.text.toLowerCase().includes(UI.schQ.toLowerCase()));
+    const posts = P.events.filter(e => !e.issue);
+    const wkStart = addDays(T, -((T.getDay()+6)%7) + UI.weekOffset*7);
+    const wkDays = [...Array(7)].map((_,i) => addDays(wkStart, i));
+    const inRange = (e,a,b) => e.date >= a && e.date < b;
+    const thisWeek = addDays(T, -((T.getDay()+6)%7));
+    const todayN = posts.filter(e => +e.date === +T).length;
+    const weekN = posts.filter(e => inRange(e, thisWeek, addDays(thisWeek,7))).length;
+    const mStart = new Date(T.getFullYear(), T.getMonth(), 1), mEnd = new Date(T.getFullYear(), T.getMonth()+1, 1);
+    const adMonth = P.events.filter(e => e.ad && inRange(e, mStart, mEnd)).length;
+    const nextIssue = P.events.filter(e => e.issue && e.date >= T).sort((a,b) => a.date - b.date)[0];
+
+    let html = srcLine + `<div class="kpis">
+      ${kpi('오늘 업로드 일정', todayN + '건', md(T), true)}
+      ${kpi('이번 주 업로드 일정', weekN + '건', `${md(thisWeek)} ~ ${md(addDays(thisWeek,6))}`)}
+      ${kpi('이번 달 광고 관련 일정', adMonth + '건', `${T.getMonth()+1}월 · 광고/CF/공구/마켓 표기 기준`)}
+      ${kpi('다음 주요 이슈', nextIssue ? md(nextIssue.date) : '–', nextIssue ? esc(oneLine(nextIssue.text)).slice(0,40) : '예정된 이슈 없음')}
+    </div>`;
+
+    html += `<h2 class="sec">주간 업로드 보드</h2>
+      <div class="filters">
+        ${P.channels.map(ch => `<button class="chip" data-ch="${esc(ch)}" aria-pressed="${!UI.chOff.has(ch)}" type="button"><i style="background:var(${chColor(ch)})"></i>${esc(ch)}</button>`).join('')}
+        <label class="toggle"><input type="checkbox" id="adOnly" ${UI.adOnly?'checked':''}> 광고 일정만</label>
+        <input class="search" id="schQ" placeholder="일정 검색 (예: 메디큐브)" value="${esc(UI.schQ)}">
+      </div>
+      <div class="weeknav">
+        <span class="wk">${wkStart.getFullYear()}년 ${md(wkStart)} ~ ${md(addDays(wkStart,6))}</span>
+        <button class="btn" data-wk="-1" type="button">‹ 이전 주</button>
+        <button class="btn" data-wk="0" type="button">이번 주</button>
+        <button class="btn" data-wk="1" type="button">다음 주 ›</button>
+      </div>`;
+    const visLanes = P.lanes.filter(l => l.issue || !UI.chOff.has(l.channel));
+    const evAt = (lane, d) => P.events.filter(e => e.lane === lane.id && +e.date === +d && pass(e));
+    // PC: 그리드 보드
+    html += `<div class="board"><div class="bh"></div>${wkDays.map(d => `<div class="bh ${+d===+T?'today':''} ${d.getDay()%6===0?'we':''}">${md(d)}</div>`).join('')}`;
+    visLanes.forEach(l => {
+      html += `<div class="lane ${l.issue?'issue':''}">${l.issue?'📌 ':`<span class="dot" style="background:var(${chColor(l.channel)})"></span>`}${esc(l.channel)}${l.format?`<small>${esc(l.format)}</small>`:''}</div>`;
+      wkDays.forEach(d => {
+        const evs = evAt(l, d);
+        html += `<div class="cell ${+d===+T?'today':''} ${l.issue?'issue':''}">${evs.map(e => `<div class="ev ${e.ad?'ad':''}" data-tip="${esc(md(e.date)+' · '+e.channel+(e.format?' '+e.format:'')+'\n'+e.text)}">${esc(e.text)}</div>`).join('')}</div>`;
+      });
+    });
+    html += `</div>`;
+    // 모바일: 날짜별 카드
+    html += `<div class="daylist">${wkDays.map(d => {
+      const evs = P.events.filter(e => +e.date === +d && pass(e) && (e.issue || !UI.chOff.has(e.channel)));
+      return `<div class="day ${+d===+T?'today':''}"><h4>${md(d)}${+d===+T?' · 오늘':''}</h4>${evs.length ? evs.map(e => `<div class="row"><span class="ch">${e.issue?'📌 이슈':esc(e.channel)}${e.format && !e.issue?`<br>${esc(e.format)}`:''}</span><span class="ev ${e.ad?'ad':''}">${esc(e.text)}</span></div>`).join('') : '<div class="empty">일정 없음</div>'}</div>`;
+    }).join('')}</div>`;
+
+    html += `<div class="grid2">
+      <div class="card"><h3>월별 채널 업로드 수</h3><p class="desc">시트에 일정이 적힌 칸 수 기준 · 주요 이슈 제외</p><div class="chart" id="schMonthly"></div></div>
+      <div class="card"><h3>광고 일정 타임라인</h3><p class="desc">최근 30일 ~ 향후 90일 · 광고/CF/공구/마켓 표기 일정</p><div class="scrollbox"><ul class="tl" id="adTl"></ul></div></div>
+    </div>`;
+    html += `<div class="check"><b>데이터 점검</b><ul>
+      <li>기간: ${ymd(P.start)} ~ ${ymd(P.end)} (${P.days}일) · 채널 행 ${P.lanes.length}개 · 일정 ${P.events.length}건</li>
+      <li>열 위치로 계산한 날짜·요일과 시트 표기 비교: ${P.mismatch ? `<span class="ng">불일치 ${P.mismatch}건</span>` : '<span class="ok">모두 일치 ✓</span>'}</li>
+      ${P.blankDates ? `<li>날짜가 비어 있는 열 ${P.blankDates}개 → 앞뒤 날짜로 자동 복원</li>` : ''}
+    </ul></div>`;
+    box.innerHTML = html;
+
+    // 차트: 월별 업로드
+    const months = monthRange(P.start, P.end);
+    const shown = P.channels.filter(ch => !UI.chOff.has(ch));
+    vbar($('#schMonthly'), {
+      labels: months.map(ymLabel), stacked: true, fmt: v => v + '건',
+      series: shown.map(ch => ({ name: ch, color: chColor(ch), values: months.map(m => posts.filter(e => e.channel === ch && ym(e.date) === m && pass(e)).length) })),
+    });
+    // 광고 타임라인
+    const tl = P.events.filter(e => e.ad && e.date >= addDays(T,-30) && e.date <= addDays(T,90) && pass(e)).sort((a,b) => a.date - b.date);
+    $('#adTl').innerHTML = tl.length ? tl.map(e => {
+      const dd = Math.round((e.date - T) / 864e5);
+      return `<li class="${dd<0?'past':''}"><span class="d">${md(e.date)}</span><span class="t">${esc(e.text)}<span class="c">${e.issue?'주요 이슈':esc(e.channel + (e.format?' · '+e.format:''))}</span></span><span class="badge ${dd===0?'b-ad':dd>0?'b-blue':''}">${dd===0?'오늘':dd>0?'D-'+dd:'완료'}</span></li>`;
+    }).join('') : '<li><span></span><span class="sub">해당 기간 광고 일정이 없어요</span></li>';
+
+    box.querySelectorAll('[data-ch]').forEach(b => b.onclick = () => { const c = b.dataset.ch; UI.chOff.has(c) ? UI.chOff.delete(c) : UI.chOff.add(c); renderActive(); });
+    box.querySelectorAll('[data-wk]').forEach(b => b.onclick = () => { const v = +b.dataset.wk; UI.weekOffset = v === 0 ? 0 : UI.weekOffset + v; renderActive(); });
+    $('#adOnly').onchange = e => { UI.adOnly = e.target.checked; renderActive(); };
+    $('#schQ').oninput = debounce(e => { UI.schQ = e.target.value; renderActive(); setTimeout(() => { const i = $('#schQ'); i.focus(); i.setSelectionRange(i.value.length, i.value.length); }); }, 300);
+  },
+
+  /* ------------------------- 💰 매출 ------------------------- */
+  revenue(box, P, srcLine){
+    const T = today();
+    const all = P.recs;
+    const recs = UI.revCh ? all.filter(r => r.channel === UI.revCh) : all;
+    const total = recs.reduce((a,r) => a + r.amount, 0);
+    const paid = recs.filter(r => r.amount > 0);
+    const dated = recs.filter(r => r.date), undated = recs.filter(r => !r.date);
+    const undatedSum = undated.reduce((a,r) => a + r.amount, 0);
+    const months = dated.length ? monthRange(new Date(Math.min(...dated.map(r => r.date))), new Date(Math.max(...dated.map(r => r.date)))) : [];
+    const mSum = months.map(m => dated.filter(r => ym(r.date) === m).reduce((a,r) => a + r.amount, 0));
+    const cum = []; mSum.reduce((a,v,i) => (cum[i] = a + v), 0);
+    const best = months.length ? months[mSum.indexOf(Math.max(...mSum))] : null;
+    const thisM = ym(T), thisMSum = dated.filter(r => ym(r.date) === thisM).reduce((a,r) => a + r.amount, 0);
+    const yearSum = dated.filter(r => r.date.getFullYear() === T.getFullYear()).reduce((a,r) => a + r.amount, 0);
+    const channels = [...new Set(all.map(r => r.channel))];
+    const vatNote = /VAT\s*제외|VAT\s*별도/i.test(P.amountHeader) ? 'VAT 제외' : (P.amountHeader || '');
+
+    let html = srcLine + `<div class="filters">
+        <button class="chip" data-rch="" aria-pressed="${!UI.revCh}" type="button">전체</button>
+        ${channels.map((c,i) => `<button class="chip" data-rch="${esc(c)}" aria-pressed="${UI.revCh===c}" type="button"><i style="background:var(${SERIES[i%8]})"></i>${esc(c)}</button>`).join('')}
+        <span class="sub">금액 기준: ${esc(vatNote)}</span>
+      </div>
+      <div class="kpis">
+      ${kpi('총매출', manwon(total), `${won(total)} · ${recs.length}건`, true)}
+      ${kpi(`이번 달 매출 (${T.getMonth()+1}월)`, manwon(thisMSum), '업로드일 기준')}
+      ${kpi(`${T.getFullYear()}년 누적`, manwon(yearSum), undatedSum ? `업로드일 미입력 ${manwon(undatedSum)} 별도` : '업로드일 기준')}
+      ${kpi('건당 평균 단가', manwon(paid.length ? total / paid.length : 0), `유상 ${paid.length}건 기준`)}
+      ${kpi('최고 매출 월', best ? best.replace(/-0?/, '년 ') + '월' : '–', best ? manwon(Math.max(...mSum)) : '')}
+    </div>`;
+    html += `<div class="grid2">
+      <div class="card"><h3>월별 매출</h3><p class="desc">업로드일 기준 · ${esc(vatNote)}</p><div class="chart" id="revM"></div></div>
+      <div class="card"><h3>누적 매출</h3><p class="desc">업로드일 기준 누적 합계${undatedSum ? ` · 날짜 미입력 ${manwon(undatedSum)} 미포함` : ''}</p><div class="chart" id="revC"></div></div>
+    </div>`;
+    if (!UI.revCh && channels.length > 1) html += `<div class="card" style="margin-top:12px"><h3>채널별 월 매출 비교</h3><p class="desc">${channels.map(esc).join(' vs ')}</p><div class="chart" id="revCh"></div></div>`;
+    html += `<div class="grid3">
+      <div class="card"><h3>유형별 매출</h3><p class="desc">PPL · 강연 · 공동구매 등</p><div id="revType"></div></div>
+      <div class="card"><h3>카테고리별 매출</h3><p class="desc">시트의 카테고리 기준</p><div id="revCat"></div></div>
+      <div class="card"><h3>브랜드별 매출 순위</h3><p class="desc">같은 브랜드는 합산</p><div id="revBrand"></div></div>
+    </div>`;
+    html += `<h2 class="sec">광고 확정 내역 <span class="sub">연락처·계약서 링크는 보안상 표시하지 않아요</span></h2>
+      <div class="tablewrap tall"><table class="t"><thead><tr><th>업로드일</th><th>유형</th><th>브랜드</th><th>제품명</th><th>채널</th><th>플랫폼</th><th class="r">금액</th><th>게시물</th></tr></thead><tbody>
+      ${[...recs].sort((a,b) => (b.date||0) - (a.date||0)).map(r => `<tr>
+        <td class="num">${r.date ? ymd(r.date) : '<span class="badge b-warn">미입력</span>'}</td><td>${esc(r.type)}</td><td>${esc(r.brand)}</td><td>${esc(r.product)}</td>
+        <td>${esc(r.channel)}</td><td>${esc(r.plat||'–')}</td><td class="r num">${won(r.amount)}</td>
+        <td>${/^https?:\/\//.test(r.link) ? `<a href="${esc(r.link)}" target="_blank" rel="noopener noreferrer">보기 ↗</a>` : '–'}</td></tr>`).join('')}
+      <tr><td colspan="6"><b>합계</b></td><td class="r num"><b>${won(total)}</b></td><td></td></tr>
+      </tbody></table></div>`;
+    // 검증
+    const sumMonths = mSum.reduce((a,v) => a + v, 0);
+    const okSum = sumMonths + undatedSum === total;
+    const sumCh = channels.reduce((a,c) => a + recs.filter(r => r.channel === c).reduce((x,r) => x + r.amount, 0), 0);
+    html += `<div class="check"><b>계산 검증</b> — 원본 행을 하나씩 더한 값과 화면 합계를 비교해요<ul>
+      <li>원본 금액 합계 ${won(total)} = 월별 합계 ${won(sumMonths)} + 업로드일 미입력 ${won(undatedSum)} → ${okSum ? '<span class="ok">일치 ✓</span>' : '<span class="ng">불일치 ✗</span>'}</li>
+      <li>채널별 합계 ${won(sumCh)} → ${sumCh === total ? '<span class="ok">일치 ✓</span>' : '<span class="ng">불일치 ✗</span>'}</li>
+      <li>마지막 달 누적 ${won(cum[cum.length-1]||0)} = 월별 합계 ${won(sumMonths)} → ${(cum[cum.length-1]||0) === sumMonths ? '<span class="ok">일치 ✓</span>' : '<span class="ng">불일치 ✗</span>'}</li>
+      ${undated.length ? `<li>⚠️ 업로드일이 비어 있는 ${undated.length}건(${undated.map(r => esc(r.product||r.brand)).join(', ')})은 월별·누적 차트에서 빠져요. 시트에 업로드일을 입력하면 자동 반영돼요.</li>` : ''}
+      ${all.filter(r => r.rawAmt && !r.amount && !/^₩?\s*0$/.test(r.rawAmt)).map(r => `<li class="ng">금액을 숫자로 읽지 못함: ${esc(r.brand)} “${esc(r.rawAmt)}”</li>`).join('')}
+    </ul></div>`;
+    box.innerHTML = html;
+
+    vbar($('#revM'), { labels: months.map(ymLabel), series: [{ name:'매출', color:'--s1', values: mSum }], fmt: won, tipLabels: months.map(m => m.replace('-', '년 ') + '월') });
+    linechart($('#revC'), { labels: months.map(ymLabel), values: cum, fmt: won, color:'--s3', tipLabels: months.map(m => m.replace('-', '년 ') + '월 누적') });
+    if ($('#revCh')) vbar($('#revCh'), { labels: months.map(ymLabel), fmt: won, tipLabels: months.map(m => m.replace('-', '년 ') + '월'),
+      series: channels.map((c,i) => ({ name: c, color: SERIES[i%8], values: months.map(m => dated.filter(r => r.channel === c && ym(r.date) === m).reduce((a,r) => a + r.amount, 0)) })) });
+    const withCount = (m, key) => toRows(m).map(r => ({ ...r, extra: recs.filter(x => x[key] === r.label).length + '건' }));
+    hbars($('#revType'), withCount(countBy(recs, 'type', r => r.amount), 'type'), { fmt: manwon, color:'--s1' });
+    hbars($('#revCat'), withCount(countBy(recs, 'cat', r => r.amount), 'cat'), { fmt: manwon, color:'--s1' });
+    hbars($('#revBrand'), withCount(countBy(recs, 'brand', r => r.amount), 'brand'), { fmt: manwon, color:'--s1', limit: 10 });
+    box.querySelectorAll('[data-rch]').forEach(b => b.onclick = () => { UI.revCh = b.dataset.rch; renderActive(); });
+  },
+
+  /* ------------------------- 📨 광고·협찬 문의 ------------------------- */
+  inquiries(box, P, srcLine){
+    const T = today();
+    const A = P.ads;
+    const thisM = ym(T);
+    const st = countBy(A, 'status');
+    const dated = A.filter(r => r.date);
+    const months = dated.length ? monthRange(new Date(Math.min(...dated.map(r => r.date))), new Date(Math.max(...dated.map(r => r.date)))) : [];
+    const filtered = A.filter(r =>
+      (!UI.inqStatus || r.status === UI.inqStatus) && (!UI.inqType || r.type === UI.inqType) &&
+      (!UI.inqQ || [r.brand, r.product, r.cat, r.note].join(' ').toLowerCase().includes(UI.inqQ.toLowerCase())));
+    let html = srcLine + `<div class="kpis">
+      ${kpi('총 문의', A.length + '건', `날짜 확인 ${dated.length}건`, true)}
+      ${kpi(`이번 달 문의 (${T.getMonth()+1}월)`, dated.filter(r => ym(r.date) === thisM).length + '건', '요청 일자 기준')}
+      ${kpi('진행 확정', (st.get('진행 확정')||0) + '건', '진행확정 여부 = O')}
+      ${kpi('거절·미진행', (st.get('거절·미진행')||0) + '건', '거절 회신 또는 X')}
+      ${kpi('회신·협의 중', ((st.get('회신·협의 중')||0) + (st.get('검토 중')||0)) + '건', '1차 회신·견적·검토')}
+    </div>
+    <div class="card" style="margin-top:12px"><h3>월별 문의 건수</h3><p class="desc">업로드 요청 일자 기준 · 날짜가 “협의”, “11/30(일)”처럼 연도 없이 적힌 ${A.length - dated.length}건 제외</p><div class="chart" id="inqM"></div></div>
+    <div class="grid3">
+      <div class="card"><h3>형태별</h3><p class="desc">눌러서 표 필터</p><div id="inqType"></div></div>
+      <div class="card"><h3>진행 상태</h3><p class="desc">눌러서 표 필터</p><div id="inqSt"></div></div>
+      <div class="card"><h3>업로드 채널별</h3><p class="desc">문의 들어온 채널</p><div id="inqCh"></div></div>
+    </div>
+    <div class="card" style="margin-top:12px"><h3>카테고리 상위 10</h3><p class="desc">시트 카테고리 원문 기준</p><div id="inqCat"></div></div>
+    <h2 class="sec">광고 인입 목록</h2>
+    <div class="filters">
+      <input class="search" id="inqQ" placeholder="브랜드·제품 검색" value="${esc(UI.inqQ)}">
+      <select class="sel" id="inqStSel"><option value="">상태 전체</option>${['진행 확정','회신·협의 중','검토 중','거절·미진행','미회신'].map(s => `<option ${UI.inqStatus===s?'selected':''}>${s}</option>`).join('')}</select>
+      <select class="sel" id="inqTySel"><option value="">형태 전체</option>${[...new Set(A.map(r => r.type))].map(s => `<option ${UI.inqType===s?'selected':''}>${esc(s)}</option>`).join('')}</select>
+    </div>
+    <div class="tablewrap tall"><table class="t"><thead><tr><th>요청 일자</th><th>브랜드</th><th>카테고리</th><th>제품명</th><th>형태</th><th>채널</th><th>상태</th><th>단가 / 비고</th></tr></thead><tbody>
+    ${[...filtered].sort((a,b) => (b.date||0) - (a.date||0)).map(r => `<tr>
+      <td class="num">${r.date ? ymd(r.date).slice(0, /\d+\s*일/.test(r.dateRaw) ? 10 : 7) : `<span class="muted">${esc(r.dateRaw||'–')}</span>`}</td>
+      <td><b>${esc(r.brand)}</b></td><td>${esc(r.cat)}</td><td>${esc(r.product)}</td>
+      <td><span class="badge">${esc(r.type)}</span>${r.typeRaw && r.typeRaw.replace(/[<>]/g,'') !== r.type ? `<div class="muted">${esc(r.typeRaw)}</div>` : ''}</td>
+      <td>${esc(r.channel||'–')}</td><td><span class="badge ${STATUS_CLASS[r.status]}">${r.status}</span>${r.comm ? `<div class="muted">${esc(mask(r.comm))}</div>` : ''}</td>
+      <td>${r.price ? `<b>${esc(mask(r.price))}</b>` : ''}<div class="muted">${esc(mask(r.note))}</div></td></tr>`).join('')}
+    </tbody></table></div><div class="count">${filtered.length}건 표시 / 전체 ${A.length}건</div>`;
+    if (P.talks.length) html += `<h2 class="sec">출연·특강 문의 <span class="sub">${P.talks.length}건</span></h2>
+      <div class="tablewrap"><table class="t"><thead><tr><th>기관/채널</th><th>분류</th><th>내용</th><th>일정</th><th>상태</th><th>비고</th></tr></thead><tbody>
+      ${P.talks.map(r => `<tr><td><b>${esc(r.brand)}</b></td><td>${esc(r.cat)}</td><td>${esc(r.product)}</td><td class="muted">${esc(r.dateRaw||'–')}</td>
+        <td><span class="badge ${STATUS_CLASS[r.status]}">${r.status}</span></td><td><div class="muted">${esc(mask([r.price, r.note].filter(Boolean).join('\n')))}</div></td></tr>`).join('')}
+      </tbody></table></div>`;
+    html += `<div class="check"><b>데이터 점검</b><ul>
+      <li>광고 문의 ${A.length}건 + 출연·특강 ${P.talks.length}건 (브랜드·제품명이 모두 빈 행 제외)</li>
+      <li>형태 표기 통일: PPL/ppl → PPL · 공구/공동구매/공구 문의/마켓 협업 → 공구·마켓 · 단순선물/무가 시딩/협찬 → 선물·시딩</li>
+      <li>상태 합계 ${[...st.values()].reduce((a,b)=>a+b,0)}건 = 전체 ${A.length}건 → ${[...st.values()].reduce((a,b)=>a+b,0) === A.length ? '<span class="ok">일치 ✓</span>' : '<span class="ng">불일치</span>'}</li>
+      <li>비고의 이메일·링크·전화번호는 화면에서 가려서 표시해요</li></ul></div>`;
+    box.innerHTML = html;
+
+    vbar($('#inqM'), { labels: months.map(ymLabel), series: [{ name:'문의', color:'--s1', values: months.map(m => dated.filter(r => ym(r.date) === m).length) }], fmt: v => v + '건', tipLabels: months.map(m => m.replace('-', '년 ') + '월') });
+    hbars($('#inqType'), toRows(countBy(A, 'type')), { fmt: v => v + '건', onClick: k => { UI.inqType = UI.inqType === k ? '' : k; renderActive(); }, active: UI.inqType });
+    hbars($('#inqSt'), toRows(countBy(A, 'status')), { fmt: v => v + '건', onClick: k => { UI.inqStatus = UI.inqStatus === k ? '' : k; renderActive(); }, active: UI.inqStatus });
+    hbars($('#inqCh'), toRows(countBy(A, r => r.channel || '미기재')), { fmt: v => v + '건' });
+    hbars($('#inqCat'), toRows(countBy(A, 'cat')), { fmt: v => v + '건', limit: 10 });
+    $('#inqQ').oninput = debounce(e => { UI.inqQ = e.target.value; renderActive(); setTimeout(() => { const i = $('#inqQ'); i.focus(); i.setSelectionRange(i.value.length, i.value.length); }); }, 300);
+    $('#inqStSel').onchange = e => { UI.inqStatus = e.target.value; renderActive(); };
+    $('#inqTySel').onchange = e => { UI.inqType = e.target.value; renderActive(); };
+  },
+
+  /* ------------------------- 💡 아이템 리스트 ------------------------- */
+  items(box, P, srcLine){
+    const I = P.items;
+    const kwCount = toRows(countBy(I.flatMap(i => i.keywords.map(k => ({ k }))), 'k'));
+    const shown = UI.kw ? I.filter(i => i.keywords.includes(UI.kw)) : I;
+    const concepts = new Set(I.map(i => i.concept).filter(Boolean));
+    let html = srcLine + `<div class="kpis">
+      ${kpi('기획 아이템', I.length + '개', '', true)}
+      ${kpi('컨셉 종류', concepts.size + '개')}
+      ${kpi('키워드', kwCount.length + '개', kwCount[0] ? `최다: ${esc(kwCount[0].label)} (${kwCount[0].value})` : '')}
+    </div>
+    <div class="card" style="margin-top:12px"><h3>자주 쓰인 키워드</h3><p class="desc">눌러서 아이템 필터${UI.kw ? ` · 현재: <b>${esc(UI.kw)}</b> <button class="btn" id="kwClear" type="button">해제</button>` : ''}</p><div id="kwChart"></div></div>
+    <div class="items">${shown.map(i => `<article class="item">
+      ${i.concept ? `<div class="concept">${esc(i.concept)}</div>` : ''}
+      <h4>${esc(i.title)}</h4>
+      ${i.body ? `<div class="meta">${esc(i.body)}</div>` : ''}
+      ${i.target ? `<div class="meta"><b>타겟</b>${esc(i.target)}</div>` : ''}
+      <div class="tags">${i.keywords.map(k => `<button class="tag ${UI.kw===k?'on':''}" data-kw="${esc(k)}" type="button">#${esc(k)}</button>`).join('')}</div>
+      <details class="more"><summary>기획의도 · 플롯 · 연출 포인트</summary>
+        ${i.intent ? `<b>기획의도</b><p>${esc(i.intent)}</p>` : ''}${i.plot ? `<b>전체 플롯</b><p>${esc(i.plot)}</p>` : ''}${i.point ? `<b>연출 포인트</b><p>${esc(i.point)}</p>` : ''}
+      </details></article>`).join('')}</div>`;
+    box.innerHTML = html;
+    hbars($('#kwChart'), kwCount, { fmt: v => v + '회', limit: 12, onClick: k => { UI.kw = UI.kw === k ? '' : k; renderActive(); }, active: UI.kw });
+    box.querySelectorAll('[data-kw]').forEach(b => b.onclick = () => { const k = b.dataset.kw; UI.kw = UI.kw === k ? '' : k; renderActive(); });
+    $('#kwClear') && ($('#kwClear').onclick = () => { UI.kw = ''; renderActive(); });
+  },
+};
+
+function debounce(fn, ms){ let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; }
+
+/* =====================================================================
+   6) 탭 / 시작 / 비밀번호
+   ===================================================================== */
+function buildShell(){
+  document.title = CONFIG.title;
+  $('#appTitle').textContent = CONFIG.title;
+  $('#tabs').innerHTML = CONFIG.tabs.map(t => `<button role="tab" data-tab="${t.id}" type="button">${esc(t.label)}</button>`).join('');
+  $('#main').innerHTML = CONFIG.tabs.map(t => `<section class="panel" id="panel-${t.id}" role="tabpanel" hidden></section>`).join('');
+  $('#tabs').addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (b) selectTab(b.dataset.tab); });
+  $('#refreshBtn').onclick = () => { CONFIG.tabs.forEach(t => { if (state.data[t.id]?.source === 'web') state.data[t.id].stale = false; }); loadAll(); };
+  $('#logoutBtn').onclick = () => { try { sessionStorage.removeItem(AUTH_KEY); } catch(e){} location.reload(); };
+  addEventListener('hashchange', () => selectTab(location.hash.slice(1), true));
+  let w = innerWidth; addEventListener('resize', debounce(() => { if (innerWidth !== w){ w = innerWidth; renderActive(); } }, 200));
+}
+function selectTab(id, fromHash){
+  const tab = CONFIG.tabs.find(t => t.id === id) || CONFIG.tabs[0];
+  state.active = tab.id;
+  document.querySelectorAll('#tabs [data-tab]').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === tab.id));
+  document.querySelectorAll('.panel').forEach(p => p.hidden = p.id !== 'panel-' + tab.id);
+  if (!fromHash && location.hash.slice(1) !== tab.id) history.replaceState(null, '', '#' + tab.id);
+  renderActive();
+}
+function startApp(){
+  $('#gate').hidden = true; $('#app').hidden = false;
+  buildShell();
+  selectTab(location.hash.slice(1));
+  loadAll();
+  state.timer = setInterval(loadAll, CONFIG.refreshMinutes * 60 * 1000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && state.lastSync && Date.now() - state.lastSync > 60000) loadAll(); });
+}
+async function sha256(s){
+  const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
+  return [...new Uint8Array(b)].map(x => x.toString(16).padStart(2,'0')).join('');
+}
+(function initGate(){
+  $('#gateTitle').textContent = CONFIG.title;
+  document.title = CONFIG.title;
+  let saved = null; try { saved = sessionStorage.getItem(AUTH_KEY); } catch(e){}
+  if (saved === CONFIG.passwordHash){ startApp(); return; }
+  $('#pw').focus();
+  $('#gateForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    if (!window.crypto?.subtle){ $('#gateErr').textContent = '이 브라우저(또는 http 주소)에서는 잠금을 풀 수 없어요. https 주소로 접속해 주세요.'; return; }
+    const h = await sha256($('#pw').value);
+    if (h === CONFIG.passwordHash){ try { sessionStorage.setItem(AUTH_KEY, h); } catch(e){} startApp(); }
+    else { $('#gateErr').textContent = '비밀번호가 맞지 않아요.'; $('#pw').select(); }
+  });
+})();
+</script>
+</body>
+</html>
