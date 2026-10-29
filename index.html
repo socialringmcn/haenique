@@ -1043,10 +1043,26 @@ async function sha256(s){
   const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
   return [...new Uint8Array(b)].map(x => x.toString(16).padStart(2,'0')).join('');
 }
-(function initGate(){
+(async function initGate(){
   $('#gateTitle').textContent = CONFIG.title;
   if (CONFIG.profileImage){ const g = $('#gateAvatar'), img = new Image(); img.onload = () => { g.hidden = false; $('#gateLock').hidden = true; g.replaceWith(Object.assign(img, { className: g.className, alt: '' })); }; img.src = CONFIG.profileImage; }
   document.title = CONFIG.title;
+  /* 자동 입장 링크
+     - 주소#auto=비밀번호        → 비밀번호를 확인해서 바로 입장
+     - 주소#key=비밀번호해시값   → 비밀번호 글자가 링크에 드러나지 않는 방식 (권장)
+     - 뒤에 &tab=revenue 처럼 붙이면 해당 탭으로 바로 열림
+     입장 후에는 주소창에서 비밀번호 부분을 자동으로 지워요. */
+  const auto = location.hash.match(/(?:^#|&)(auto|key)=([^&]*)/);
+  if (auto){
+    const tabM = location.hash.match(/(?:^#|&)tab=([^&]+)/);
+    history.replaceState(null, '', location.pathname + location.search + (tabM ? '#' + tabM[1] : ''));
+    let v = ''; try { v = decodeURIComponent(auto[2]); } catch(e){ v = auto[2]; }
+    let h = '';
+    if (auto[1] === 'key') h = v.trim().toLowerCase();
+    else if (window.crypto?.subtle) h = await sha256(v);
+    if (h === CONFIG.passwordHash){ try { sessionStorage.setItem(AUTH_KEY, h); } catch(e){} startApp(); return; }
+    $('#gateErr').textContent = '링크에 담긴 비밀번호가 맞지 않아요. 직접 입력해 주세요.';
+  }
   let saved = null; try { saved = sessionStorage.getItem(AUTH_KEY); } catch(e){}
   if (saved === CONFIG.passwordHash){ startApp(); return; }
   $('#pw').focus();
@@ -1057,27 +1073,6 @@ async function sha256(s){
     if (h === CONFIG.passwordHash){ try { sessionStorage.setItem(AUTH_KEY, h); } catch(e){} startApp(); }
     else { $('#gateErr').textContent = '비밀번호가 맞지 않아요.'; $('#pw').select(); }
   });
-})();
-</script>
-   <script>
-(function () {
-  var m = location.hash.match(/[#&]auto=([^&]+)/);
-  if (!m) return;
-  var pw = decodeURIComponent(m[1]);
-  history.replaceState(null, "", location.pathname + location.search);
-  function tryUnlock(n) {
-    var input = document.querySelector('input[type="password"]');
-    if (!input) { if (n < 50) setTimeout(function () { tryUnlock(n + 1); }, 100); return; }
-    input.value = pw;
-    input.dispatchEvent(new Event("input", { bubbles: true }));
-    var btn = [].slice.call(document.querySelectorAll('button, input[type="submit"]'))
-      .filter(function (b) { return /입장/.test(b.textContent || b.value || ""); })[0];
-    if (btn) btn.click();
-    else if (input.form) { input.form.requestSubmit ? input.form.requestSubmit() : input.form.submit(); }
-    else input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
-  }
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", function () { tryUnlock(0); });
-  else tryUnlock(0);
 })();
 </script>
 </body>
