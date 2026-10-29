@@ -104,6 +104,19 @@ h2.sec{font-size:15px;margin:28px 0 12px;letter-spacing:-.01em}
 .kpi .k-label{font-size:12px;color:var(--ink-2);font-weight:600}
 .kpi .k-value{font-size:26px;font-weight:700;letter-spacing:-.03em;margin-top:6px;line-height:1.2}
 .kpi .k-sub{font-size:12px;color:var(--ink-3);margin-top:4px}
+.glance-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin:0 0 10px}
+.glance-head h2{font-size:16px;margin:0;letter-spacing:-.01em}
+.kpi.glance{border-top:3px solid var(--accent);cursor:pointer;transition:transform .15s,box-shadow .15s}
+.kpi.glance:hover{transform:translateY(-2px)}
+.kpi.glance .k-value small{font-size:14px;font-weight:600;margin-left:2px;color:var(--ink-2)}
+.kpi.glance.off{border-top-color:var(--line);cursor:default;background:var(--surface-2)}
+.kpi.glance.off:hover{transform:none}
+.kpi .vat{display:inline-block;font-size:10px;font-weight:600;padding:1px 6px;border-radius:999px;background:var(--surface-2);color:var(--ink-2);margin-left:4px;vertical-align:1px}
+@media (min-width:761px){.kpi.wide{grid-column:span 2}}
+.kwtags{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px}
+.kwtags .tag{font-size:11px;padding:2px 8px}
+.kwtags .tag em{font-style:normal;color:var(--ink-3);margin-left:3px}
+.kwtags .tag.on em{color:#fff}
 .kpi.hero{background:var(--ink);color:var(--bg);border-color:var(--ink)}
 .kpi.hero .k-label,.kpi.hero .k-sub{color:color-mix(in srgb,var(--bg) 70%,transparent)}
 
@@ -763,6 +776,58 @@ function bindFile(tab, box){
   });
 }
 
+
+/* ------------------------- 메인 '한눈에 보기' ------------------------- */
+function glanceHTML(P, T){
+  const g = (label, value, sub, goto, extra='') =>
+    `<div class="kpi glance ${goto?'':'off'}" ${goto?`data-goto="${goto}" role="link" tabindex="0"`:''}><div class="k-label">${label}${extra}</div><div class="k-value num">${value}</div>${sub?`<div class="k-sub">${sub}</div>`:''}</div>`;
+  const tabOf = type => CONFIG.tabs.find(t => t.type === type);
+  const dataOf = type => { const t = tabOf(type); const d = t && state.data[t.id]; return d && !d.error ? d.parsed : null; };
+  const short = (s, n=26) => { s = oneLine(s); return s.length > n ? s.slice(0, n-1) + '…' : s; };
+  const dLabel = d => { const n = Math.round((d - T) / 864e5); return n === 0 ? 'D-DAY' : 'D-' + n; };
+  const cards = [];
+
+  // ① 다음 일정 (광고 일정 우선 → 없으면 주요 이슈 → 다음 업로드)
+  const fut = P.events.filter(e => e.date >= T).sort((a,b) => a.date - b.date);
+  const nAd = fut.find(e => e.ad), nIssue = fut.find(e => e.issue);
+  const nLong = fut.find(e => /롱폼/.test(e.format) && +e.date > +T);   // 다음 메인 영상
+  const nAny = fut.find(e => !e.issue && +e.date > +T) || fut[0];
+  const nx = nAd || nIssue || nLong || nAny;
+  const nxKind = nAd ? '광고' : nIssue ? '주요 이슈' : (nx ? nx.channel + (nx.format ? ' ' + nx.format : '') : '');
+  cards.push(g('⏭️ 다음 일정', nx ? dLabel(nx.date) : '–',
+    nx ? `${md(nx.date)} · ${esc(nxKind)} · ${esc(short(nx.text))}` : '예정된 일정 없음', 'schedule'));
+
+  // ② 이번 달 일정
+  const mS = new Date(T.getFullYear(), T.getMonth(), 1), mE = new Date(T.getFullYear(), T.getMonth()+1, 1);
+  const inM = P.events.filter(e => e.date >= mS && e.date < mE);
+  cards.push(g(`🗓️ ${T.getMonth()+1}월 일정`, inM.filter(e => !e.issue).length + '<small>건</small>',
+    `광고 ${inM.filter(e => e.ad).length}건 포함 · 주요 이슈 ${inM.filter(e => e.issue).length}건`, 'schedule'));
+
+  // ③ 광고 인입
+  const inq = dataOf('inquiries');
+  cards.push(inq
+    ? g('📨 광고 인입', inq.ads.length + '<small>건</small>', esc(toRows(countBy(inq.ads, 'type')).map(r => `${r.label} ${r.value}`).join(' · ')), tabOf('inquiries').id)
+    : g('📨 광고 인입', '–', '시트 불러오는 중이거나 연결 필요', tabOf('inquiries')?.id));
+
+  // ④ 광고 매출 합계
+  const rev = dataOf('revenue');
+  if (rev){
+    const tot = rev.recs.reduce((a,r) => a + r.amount, 0);
+    const done = rev.recs.filter(r => r.date && r.date <= T).length;
+    const man = Math.round(tot / 1e4).toLocaleString('ko-KR');
+    cards.push(g('💰 광고 매출 합계', `${man}<small>만원</small>`, `확정 ${rev.recs.length}건 · 업로드 완료 ${done}건<br>${won(tot)}`, tabOf('revenue').id,
+      /VAT\s*(제외|별도)/i.test(rev.amountHeader) ? '<span class="vat">VAT 제외</span>' : ''));
+  } else cards.push(g('💰 광고 매출 합계', '–', '시트 불러오는 중이거나 연결 필요', tabOf('revenue')?.id));
+
+  // ⑤ 최신 인게이지먼트 (시트 연결 전)
+  const eng = CONFIG.tabs.find(t => t.type === 'engagement');
+  cards.push(eng ? g('📈 최신 인게이지먼트', '–', '', eng.id) : g('📈 최신 인게이지먼트', '–', '인게이지먼트 시트를 연결하면 표시돼요', ''));
+
+  return `<div class="glance-head"><h2>📋 한눈에 보기</h2><span class="sub">각 탭 시트에서 자동 계산</span></div><div class="kpis">${cards.join('')}</div>`;
+}
+document.addEventListener('click', e => { const c = e.target.closest?.('[data-goto]'); if (c) selectTab(c.dataset.goto); });
+document.addEventListener('keydown', e => { if (e.key === 'Enter'){ const c = e.target.closest?.('[data-goto]'); if (c) selectTab(c.dataset.goto); } });
+
 const RENDER = {
   /* ------------------------- 📅 스케줄 ------------------------- */
   schedule(box, P, srcLine){
@@ -780,12 +845,7 @@ const RENDER = {
     const adMonth = P.events.filter(e => e.ad && inRange(e, mStart, mEnd)).length;
     const nextIssue = P.events.filter(e => e.issue && e.date >= T).sort((a,b) => a.date - b.date)[0];
 
-    let html = srcLine + `<div class="kpis">
-      ${kpi('오늘 업로드 일정', todayN + '건', md(T), true)}
-      ${kpi('이번 주 업로드 일정', weekN + '건', `${md(thisWeek)} ~ ${md(addDays(thisWeek,6))}`)}
-      ${kpi('이번 달 광고 관련 일정', adMonth + '건', `${T.getMonth()+1}월 · 광고/CF/공구/마켓 표기 기준`)}
-      ${kpi('다음 주요 이슈', nextIssue ? md(nextIssue.date) : '–', nextIssue ? esc(oneLine(nextIssue.text)).slice(0,40) : '예정된 이슈 없음')}
-    </div>`;
+    let html = srcLine + glanceHTML(P, T);
 
     html += `<h2 class="sec">주간 업로드 보드</h2>
       <div class="filters">
@@ -895,12 +955,7 @@ const RENDER = {
       <div class="card"><h3>월별 매출</h3><p class="desc">업로드일 기준 · ${esc(vatNote)}</p><div class="chart" id="revM"></div></div>
       <div class="card"><h3>누적 매출</h3><p class="desc">업로드일 기준 누적 합계${undatedSum ? ` · 날짜 미입력 ${manwon(undatedSum)} 미포함` : ''}</p><div class="chart" id="revC"></div></div>
     </div>`;
-    if (!UI.revCh && channels.length > 1) html += `<div class="card" style="margin-top:12px"><h3>채널별 월 매출 비교</h3><p class="desc">${channels.map(esc).join(' vs ')}</p><div class="chart" id="revCh"></div></div>`;
-    html += `<div class="grid3">
-      <div class="card"><h3>유형별 매출</h3><p class="desc">PPL · 강연 · 공동구매 등</p><div id="revType"></div></div>
-      <div class="card"><h3>카테고리별 매출</h3><p class="desc">시트의 카테고리 기준</p><div id="revCat"></div></div>
-      <div class="card"><h3>브랜드별 매출 순위</h3><p class="desc">같은 브랜드는 합산</p><div id="revBrand"></div></div>
-    </div>`;
+    html += `<div class="card" style="margin-top:12px"><h3>카테고리별 매출</h3><p class="desc">시트의 카테고리 기준</p><div id="revCat"></div></div>`;
     html += `<h2 class="sec">광고 확정 내역 <span class="sub">연락처·계약서 링크는 보안상 표시하지 않아요</span></h2>
       <div class="tablewrap tall"><table class="t"><thead><tr><th>업로드일</th><th>유형</th><th>브랜드</th><th>제품명</th><th>채널</th><th>플랫폼</th><th>게시물 유지</th><th class="r">금액</th><th>게시물</th></tr></thead><tbody>
       ${[...recs].sort((a,b) => (b.date||0) - (a.date||0)).map(r => `<tr>
@@ -924,12 +979,8 @@ const RENDER = {
 
     vbar($('#revM'), { labels: months.map(ymLabel), series: [{ name:'매출', color:'--s1', values: mSum }], fmt: won, tipLabels: months.map(m => m.replace('-', '년 ') + '월') });
     linechart($('#revC'), { labels: months.map(ymLabel), values: cum, fmt: won, color:'--s3', tipLabels: months.map(m => m.replace('-', '년 ') + '월 누적') });
-    if ($('#revCh')) vbar($('#revCh'), { labels: months.map(ymLabel), fmt: won, tipLabels: months.map(m => m.replace('-', '년 ') + '월'),
-      series: channels.map((c,i) => ({ name: c, color: SERIES[i%8], values: months.map(m => dated.filter(r => r.channel === c && ym(r.date) === m).reduce((a,r) => a + r.amount, 0)) })) });
     const withCount = (m, key) => toRows(m).map(r => ({ ...r, extra: recs.filter(x => x[key] === r.label).length + '건' }));
-    hbars($('#revType'), withCount(countBy(recs, 'type', r => r.amount), 'type'), { fmt: manwon, color:'--s1' });
     hbars($('#revCat'), withCount(countBy(recs, 'cat', r => r.amount), 'cat'), { fmt: manwon, color:'--s1' });
-    hbars($('#revBrand'), withCount(countBy(recs, 'brand', r => r.amount), 'brand'), { fmt: manwon, color:'--s1', limit: 10 });
     box.querySelectorAll('[data-rch]').forEach(b => b.onclick = () => { UI.revCh = b.dataset.rch; renderActive(); });
   },
 
@@ -1003,9 +1054,10 @@ const RENDER = {
     let html = srcLine + `<div class="kpis">
       ${kpi('기획 아이템', I.length + '개', '', true)}
       ${kpi('컨셉 종류', concepts.size + '개')}
-      ${kpi('키워드', kwCount.length + '개', kwCount[0] ? `최다: ${esc(kwCount[0].label)} (${kwCount[0].value})` : '')}
+      <div class="kpi wide"><div class="k-label">자주 쓰인 키워드</div><div class="k-value num">${kwCount.length}개</div>
+        <div class="kwtags">${kwCount.slice(0, 10).map(r => `<button class="tag ${UI.kw===r.label?'on':''}" data-kw="${esc(r.label)}" type="button">#${esc(r.label)}<em>${r.value}</em></button>`).join('')}</div>
+        ${UI.kw ? `<div class="k-sub">‘${esc(UI.kw)}’ 아이템만 보는 중 · <a href="#" id="kwClear">전체 보기</a></div>` : '<div class="k-sub">태그를 누르면 해당 아이템만 보여요</div>'}</div>
     </div>
-    <div class="card" style="margin-top:12px"><h3>자주 쓰인 키워드</h3><p class="desc">눌러서 아이템 필터${UI.kw ? ` · 현재: <b>${esc(UI.kw)}</b> <button class="btn" id="kwClear" type="button">해제</button>` : ''}</p><div id="kwChart"></div></div>
     <div class="items">${shown.map(i => `<article class="item">
       ${i.concept ? `<div class="concept">${esc(i.concept)}</div>` : ''}
       <h4>${esc(i.title)}</h4>
@@ -1016,9 +1068,8 @@ const RENDER = {
         ${i.intent ? `<b>기획의도</b><p>${esc(i.intent)}</p>` : ''}${i.plot ? `<b>전체 플롯</b><p>${esc(i.plot)}</p>` : ''}${i.point ? `<b>연출 포인트</b><p>${esc(i.point)}</p>` : ''}
       </details></article>`).join('')}</div>`;
     box.innerHTML = html;
-    hbars($('#kwChart'), kwCount, { fmt: v => v + '회', limit: 12, onClick: k => { UI.kw = UI.kw === k ? '' : k; renderActive(); }, active: UI.kw });
     box.querySelectorAll('[data-kw]').forEach(b => b.onclick = () => { const k = b.dataset.kw; UI.kw = UI.kw === k ? '' : k; renderActive(); });
-    $('#kwClear') && ($('#kwClear').onclick = () => { UI.kw = ''; renderActive(); });
+    $('#kwClear') && ($('#kwClear').onclick = e => { e.preventDefault(); UI.kw = ''; renderActive(); });
   },
 };
 
