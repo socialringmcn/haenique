@@ -1152,5 +1152,47 @@ async function sha256(s){
   });
 })();
 </script>
+   <script>
+(function () {
+  var m = location.hash.match(/[#&]auto=([^&]+)/);
+  if (!m) return;
+  var pw = decodeURIComponent(m[1]);
+  var rest = location.hash.replace(/[#&]auto=[^&]*/, "").replace(/^&/, "#");
+  history.replaceState(null, "", location.pathname + location.search + (rest.length > 1 ? rest : ""));
+  var tries = 0;
+  function fire(el, type) {
+    el.dispatchEvent(new KeyboardEvent(type, { key: "Enter", code: "Enter", keyCode: 13, which: 13, bubbles: true, cancelable: true }));
+  }
+  function setVal(input) {
+    var setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value").set;
+    setter.call(input, pw);
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+  }
+  function findEnter() {
+    var all = document.querySelectorAll('button, input[type="submit"], input[type="button"], a, [role="button"], div, span');
+    for (var i = 0; i < all.length; i++) {
+      var t = (all[i].textContent || all[i].value || "").replace(/\s/g, "");
+      if (/입장|확인|열기|로그인/.test(t) && t.length <= 12 && all[i].offsetParent !== null) return all[i];
+    }
+    return null;
+  }
+  function tryUnlock() {
+    var input = document.querySelector('input[type="password"]') || document.querySelector('input[type="text"], input:not([type])');
+    if (!input || input.offsetParent === null) { if (++tries < 60) setTimeout(tryUnlock, 100); return; }
+    input.focus(); setVal(input);
+    var btn = findEnter();
+    if (btn) btn.click();
+    else { fire(input, "keydown"); fire(input, "keypress"); fire(input, "keyup");
+      if (input.form) { input.form.requestSubmit ? input.form.requestSubmit() : input.form.submit(); } }
+    setTimeout(function () {
+      var still = document.querySelector('input[type="password"]');
+      if (still && still.offsetParent !== null && ++tries < 60) { fire(still, "keydown"); fire(still, "keyup"); }
+    }, 400);
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", tryUnlock);
+  else setTimeout(tryUnlock, 50);
+})();
+</script>
 </body>
 </html>
