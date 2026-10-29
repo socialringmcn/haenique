@@ -290,7 +290,7 @@ details.more b{display:block;font-size:12px;color:var(--ink);margin-top:10px}
    - links        : 제목 옆 바로가기 버튼. url이 비어 있으면 버튼이 숨겨짐
    - passwordHash : 비밀번호의 SHA-256 값 (비밀번호 원문은 코드에 넣지 않음)
    - tabs         : 메뉴 순서대로. 첫 번째가 메인 페이지.
-                    type 은 schedule / revenue / inquiries / items 중 하나
+                    type 은 schedule / revenue / inquiries / items / engagement 중 하나
                     url  은 구글 시트 '웹에 게시' → CSV 링크
    ===================================================================== */
 /* 프로필 사진 (코드 안에 내장 — 별도 업로드 필요 없음) */
@@ -317,6 +317,8 @@ const CONFIG = {
       url:'https://docs.google.com/spreadsheets/d/e/2PACX-1vSjabMqU7vJx-eg5WPxBLYYcq-9H-9z0-bnJOKQY1HhdTvTNiVXTnegZHUYDrosE2OK6Cf4Khu2g1w7/pub?gid=1181915367&single=true&output=csv' },
     { id:'items',     type:'items',     label:'아이템 리스트',
       url:'https://docs.google.com/spreadsheets/d/e/2PACX-1vSjabMqU7vJx-eg5WPxBLYYcq-9H-9z0-bnJOKQY1HhdTvTNiVXTnegZHUYDrosE2OK6Cf4Khu2g1w7/pub?gid=2124490289&single=true&output=csv' },
+    { id:'engagement', type:'engagement', label:'인게이지먼트·조회수',
+      url:'https://docs.google.com/spreadsheets/d/e/2PACX-1vSjabMqU7vJx-eg5WPxBLYYcq-9H-9z0-bnJOKQY1HhdTvTNiVXTnegZHUYDrosE2OK6Cf4Khu2g1w7/pub?gid=440293832&single=true&output=csv' },
   ],
 };
 /* ===================================================================== */
@@ -333,7 +335,7 @@ const manwon = n => {
   if (Math.abs(n) >= 1e4) return Math.round(n/1e4).toLocaleString('ko-KR') + '만원';
   return Math.round(n).toLocaleString('ko-KR') + '원';
 };
-const shortNum = n => n >= 1e8 ? (n/1e8).toFixed(1).replace(/\.0$/,'')+'억' : n >= 1e4 ? Math.round(n/1e4).toLocaleString('ko-KR')+'만' : String(Math.round(n));
+const shortNum = n => n >= 1e8 ? (n/1e8).toFixed(1).replace(/\.0$/,'')+'억' : n >= 1e4 ? (Math.round(n/1e3)/10).toLocaleString('ko-KR', { maximumFractionDigits: 1 })+'만' : Math.round(n).toLocaleString('ko-KR');
 const pad = n => String(n).padStart(2,'0');
 const ymd = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
 const ym = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}`;
@@ -539,6 +541,34 @@ const PARSERS = {
     return { items };
   },
 
+  /* ---------- 인게이지먼트·조회수 (크리에이터 × 지표 × 월) ---------- */
+  engagement(rows){
+    const hdr = findRow(rows, r => r.some(c => norm(c) === '구분'));
+    if (hdr < 0) throw new Error('헤더(구분) 없음');
+    const H = rows[hdr];
+    const mCol = H.findIndex(c => norm(c) === '구분');
+    let crCol = H.findIndex(c => /크리에이터/.test(c)); if (crCol < 0) crCol = Math.max(mCol - 1, 0);
+    const totCol = H.findIndex(c => norm(c) === '누적');
+    const months = H.map((h,i) => { const m = String(h).match(/^\s*(\d{1,2})\s*월\s*$/); return m ? { i, m: +m[1], label: m[1] + '월' } : null; }).filter(Boolean);
+    const creators = []; let cur = null;
+    const num = v => { const t = String(v).replace(/[,\s]/g,''); return /^-?\d+(\.\d+)?$/.test(t) ? Number(t) : null; };
+    for (let r = hdr+1; r < rows.length; r++){
+      const row = rows[r] || [];
+      const cr = oneLine(row[crCol]), name = oneLine(row[mCol]);
+      if (cr){ cur = { name: cr, metrics: [] }; creators.push(cur); }
+      if (!name) continue;
+      if (!cur){ cur = { name: '기타', metrics: [] }; creators.push(cur); }
+      const raw = months.map(x => oneLine(row[x.i]));
+      const filled = raw.filter(Boolean);
+      const isNum = filled.length > 0 && filled.every(v => num(v) !== null);
+      const kind = !isNum ? 'text' : /구독자|팔로워|follower|subscriber/i.test(name) ? 'stock' : 'flow';
+      cur.metrics.push({ name, kind, raw, values: raw.map(v => isNum ? num(v) : null), total: totCol >= 0 ? num(row[totCol]) : null, totalRaw: totCol >= 0 ? oneLine(row[totCol]) : '' });
+    }
+    let last = -1;
+    creators.forEach(c => c.metrics.forEach(m => m.raw.forEach((v,i) => { if (v && i > last) last = i; })));
+    return { creators, months, last };
+  },
+
   /* ---------- 매출(광고확정건) ---------- */
   revenue(rows){
     const hdr = findRow(rows, r => r.some(c => norm(c) === '브랜드') && r.some(c => /단가|금액|매출/.test(c)));
@@ -700,29 +730,34 @@ function vbar(el, { labels, series, stacked=false, fmt=String, height=240, tipLa
   el.innerHTML = legendHTML(series) + `<svg viewBox="0 0 ${W} ${H}" height="${H}" role="img">${g}</svg>`;
 }
 /* 선 차트 (누적 등) */
-function linechart(el, { labels, values, fmt=String, color='--s1', height=240, tipLabels }){
+function linechart(el, { labels, values, fmt=String, color='--s1', height=240, tipLabels, minZero=true }){
   if (!el) return;
   const W = Math.max(el.clientWidth || 600, 280), H = height, L = 48, R = 14, T = 14, B = 26;
   const n = labels.length, pw = W - L - R, ph = H - T - B;
-  const { max, step } = niceMax(Math.max(...values, 0) || 1);
+  let min = 0, max, step;
+  if (minZero){ ({ max, step } = niceMax(Math.max(...values, 0) || 1)); }
+  else {
+    const lo = Math.min(...values), hi = Math.max(...values), span = Math.max(hi - lo, hi * 0.01, 1);
+    ({ step } = niceMax(span)); min = Math.floor((lo - span * 0.15) / step) * step; max = Math.ceil((hi + span * 0.15) / step) * step;
+  }
   const x = i => L + (n === 1 ? pw/2 : (pw * i) / (n - 1));
-  const y = v => T + ph - (v / max) * ph;
+  const y = v => T + ph - ((v - min) / (max - min)) * ph;
   let g = '';
-  for (let v = 0; v <= max + 1e-9; v += step){
+  for (let v = min; v <= max + 1e-9; v += step){
     g += `<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--grid)"/>`;
     g += `<text x="${L-8}" y="${y(v)+4}" text-anchor="end" class="num">${esc(shortNum(v))}</text>`;
   }
   const every = Math.ceil(n / Math.max(Math.floor(pw / 46), 1));
   labels.forEach((lab,i) => { if (i % every === 0 || i === n-1) g += `<text x="${x(i)}" y="${H-8}" text-anchor="middle">${esc(lab)}</text>`; });
   const pts = values.map((v,i) => `${x(i)},${y(v)}`).join(' ');
-  g += `<polygon points="${x(0)},${y(0)} ${pts} ${x(n-1)},${y(0)}" fill="var(${color})" fill-opacity=".08"/>`;
+  g += `<polygon points="${x(0)},${y(min)} ${pts} ${x(n-1)},${y(min)}" fill="var(${color})" fill-opacity=".08"/>`;
   g += `<polyline points="${pts}" fill="none" stroke="var(${color})" stroke-width="2" stroke-linejoin="round"/>`;
   values.forEach((v,i) => { g += `<circle cx="${x(i)}" cy="${y(v)}" r="4" fill="var(${color})" stroke="var(--surface)" stroke-width="2"/>`; });
   const last = values[n-1];
   if (n) g += `<text x="${x(n-1)}" y="${y(last)-10}" text-anchor="end" style="fill:var(--ink);font-weight:600" class="num">${esc(fmt(last))}</text>`;
   const band = n > 1 ? pw / (n - 1) : pw;
   labels.forEach((lab,i) => { g += `<rect class="hit" x="${x(i)-band/2}" y="${T}" width="${band}" height="${ph}" data-tip="${esc((tipLabels?tipLabels[i]:lab) + '\n' + fmt(values[i]))}"/>`; });
-  g += `<line x1="${L}" x2="${W-R}" y1="${y(0)}" y2="${y(0)}" stroke="var(--ink-3)"/>`;
+  g += `<line x1="${L}" x2="${W-R}" y1="${y(min)}" y2="${y(min)}" stroke="var(--ink-3)"/>`;
   el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" height="${H}" role="img">${g}</svg>`;
 }
 /* 가로 막대 (순위·비교) — HTML로 그려서 모바일에서도 글자가 잘 보임 */
@@ -820,8 +855,18 @@ function glanceHTML(P, T){
   } else cards.push(g('💰 광고 매출 합계', '–', '시트 불러오는 중이거나 연결 필요', tabOf('revenue')?.id));
 
   // ⑤ 최신 인게이지먼트 (시트 연결 전)
-  const eng = CONFIG.tabs.find(t => t.type === 'engagement');
-  cards.push(eng ? g('📈 최신 인게이지먼트', '–', '', eng.id) : g('📈 최신 인게이지먼트', '–', '인게이지먼트 시트를 연결하면 표시돼요', ''));
+  const engTab = tabOf('engagement'), eng = dataOf('engagement');
+  if (eng){
+    const all = eng.creators.flatMap(c => c.metrics.map(m => ({ c, m })));
+    const pick = all.find(x => /IG\s*팔로워/i.test(x.m.name)) || all.find(x => x.m.kind === 'stock') || all.find(x => x.m.kind === 'flow');
+    if (pick){
+      const v = pick.m.values; let i = v.length - 1; while (i >= 0 && v[i] == null) i--;
+      let j = i - 1; while (j >= 0 && v[j] == null) j--;
+      const d = j >= 0 ? v[i] - v[j] : null, pct = j >= 0 && v[j] ? d / v[j] * 100 : 0;
+      cards.push(g(`📈 최신 ${esc(pick.m.name)}`, i >= 0 ? v[i].toLocaleString('ko-KR') : '–',
+        i >= 0 ? `${esc(pick.c.name)} · ${eng.months[i].label} 기준${d != null ? ` · ${d > 0 ? '▲' : d < 0 ? '▼' : '–'} ${Math.abs(d).toLocaleString('ko-KR')} (${d >= 0 ? '+' : ''}${pct.toFixed(Math.abs(pct) < 1 ? 2 : 1)}%) 전월 대비` : ''}` : '', engTab.id));
+    } else cards.push(g('📈 최신 인게이지먼트', '–', '표시할 지표가 없어요', engTab.id));
+  } else cards.push(g('📈 최신 인게이지먼트', '–', engTab ? '시트 불러오는 중이거나 연결 필요' : '인게이지먼트 시트를 연결하면 표시돼요', engTab ? engTab.id : ''));
 
   return `<div class="glance-head"><h2>📋 한눈에 보기</h2><span class="sub">각 탭 시트에서 자동 계산</span></div><div class="kpis">${cards.join('')}</div>`;
 }
@@ -1045,6 +1090,60 @@ const RENDER = {
     $('#inqTySel').onchange = e => { UI.inqType = e.target.value; renderActive(); };
   },
 
+  /* ------------------------- 📈 인게이지먼트·조회수 ------------------------- */
+  engagement(box, P, srcLine){
+    const nf = n => Math.round(n).toLocaleString('ko-KR');
+    const M = P.months.slice(0, P.last + 1);
+    let html = srcLine, charts = [];
+    const lastIdx = m => { for (let i = M.length - 1; i >= 0; i--) if (m.raw[i]) return i; return -1; };
+    const prevIdx = (m, i) => { for (let j = i - 1; j >= 0; j--) if (m.values[j] != null) return j; return -1; };
+    const delta = (m, i) => {
+      const j = prevIdx(m, i); if (i < 0 || j < 0) return '';
+      const d = m.values[i] - m.values[j], pct = m.values[j] ? d / m.values[j] * 100 : 0;
+      return `${d > 0 ? '▲' : d < 0 ? '▼' : '–'} ${nf(Math.abs(d))} (${d >= 0 ? '+' : ''}${pct.toFixed(Math.abs(pct) < 1 ? 2 : 1)}%) 전월 대비`;
+    };
+    P.creators.forEach((c, ci) => {
+      html += `<h2 class="sec">${esc(c.name)}</h2><div class="kpis">`;
+      c.metrics.forEach(m => {
+        const i = lastIdx(m); if (i < 0) return;
+        if (m.kind === 'text') html += kpi(m.name, `<span style="font-size:20px">${esc(m.raw[i])}</span>`, `${M[i].label} 기준`);
+        else if (m.kind === 'stock') html += kpi(m.name, nf(m.values[i]), `${M[i].label} 기준 · ${delta(m, i)}`, /팔로워|구독자/.test(m.name) && ci === 0 && /IG/.test(m.name));
+        else html += kpi(`${m.name} (${M[i].label})`, nf(m.values[i]), `${delta(m, i)}<br>누적 ${nf(m.values.reduce((a,v) => a + (v||0), 0))}`);
+      });
+      html += `</div><div class="grid3">`;
+      c.metrics.filter(m => m.kind !== 'text').forEach((m, k) => {
+        const id = `eng-${ci}-${k}`;
+        html += `<div class="card"><h3>${esc(m.name)}</h3><p class="desc">${m.kind === 'stock' ? '월말 기준 추이' : '월별 합계'}</p><div class="chart" id="${id}"></div></div>`;
+        charts.push({ id, m });
+      });
+      html += `</div>`;
+    });
+    // 원본 표 + 검증
+    html += `<h2 class="sec">월별 원본 데이터</h2><div class="tablewrap"><table class="t"><thead><tr><th>크리에이터</th><th>구분</th>${M.map(x => `<th class="r">${x.label}</th>`).join('')}<th class="r">시트 누적</th><th>검증</th></tr></thead><tbody>`;
+    const checks = [];
+    P.creators.forEach(c => c.metrics.forEach((m, k) => {
+      let chk = '–';
+      if (m.kind !== 'text' && m.total != null){
+        const sum = m.values.reduce((a,v) => a + (v||0), 0);
+        const ok = sum === m.total;
+        chk = ok ? '<span class="ok">합계 일치 ✓</span>' : `<span class="ng">합계 ${nf(sum)} ≠ 누적</span>`;
+        checks.push(ok);
+        if (m.kind === 'stock') chk += '<div class="muted">구독자·팔로워는 월별 값을 더한 수라 실제 규모는 최신 월 값으로 표시</div>';
+      }
+      html += `<tr><td style="white-space:nowrap">${k === 0 ? `<b>${esc(c.name)}</b>` : ''}</td><td style="white-space:nowrap">${esc(m.name)}</td>${M.map((x,i) => `<td class="r num">${m.kind === 'text' ? `<span class="muted">${esc(m.raw[i] || '')}</span>` : (m.values[i] != null ? nf(m.values[i]) : '')}</td>`).join('')}<td class="r num">${esc(m.totalRaw)}</td><td>${chk}</td></tr>`;
+    }));
+    html += `</tbody></table></div>`;
+    html += `<div class="check"><b>계산 검증</b><ul><li>월별 값을 직접 더한 합계와 시트의 ‘누적’ 비교: ${checks.every(Boolean) ? `<span class="ok">${checks.length}개 지표 모두 일치 ✓</span>` : `<span class="ng">${checks.filter(x => !x).length}개 지표 불일치</span>`}</li>
+      <li>값이 입력된 마지막 달: ${M.length ? M[M.length-1].label : '–'} · 빈 칸(예: 1월 구독자·팔로워)은 0이 아니라 ‘미입력’으로 처리</li></ul></div>`;
+    box.innerHTML = html;
+    charts.forEach(({ id, m }) => {
+      const idx = M.map((_,i) => i).filter(i => m.values[i] != null);
+      const labels = idx.map(i => M[i].label), vals = idx.map(i => m.values[i]);
+      if (m.kind === 'stock') linechart($('#' + id), { labels, values: vals, fmt: nf, color: '--s3', height: 200, minZero: false });
+      else vbar($('#' + id), { labels, series: [{ name: m.name, color: '--s1', values: vals }], fmt: nf, height: 200 });
+    });
+  },
+
   /* ------------------------- 💡 아이템 리스트 ------------------------- */
   items(box, P, srcLine){
     const I = P.items;
@@ -1150,48 +1249,6 @@ async function sha256(s){
     if (h === CONFIG.passwordHash){ try { sessionStorage.setItem(AUTH_KEY, h); } catch(e){} startApp(); }
     else { $('#gateErr').textContent = '비밀번호가 맞지 않아요.'; $('#pw').select(); }
   });
-})();
-</script>
-   <script>
-(function () {
-  var m = location.hash.match(/[#&]auto=([^&]+)/);
-  if (!m) return;
-  var pw = decodeURIComponent(m[1]);
-  var rest = location.hash.replace(/[#&]auto=[^&]*/, "").replace(/^&/, "#");
-  history.replaceState(null, "", location.pathname + location.search + (rest.length > 1 ? rest : ""));
-  var tries = 0;
-  function fire(el, type) {
-    el.dispatchEvent(new KeyboardEvent(type, { key: "Enter", code: "Enter", keyCode: 13, which: 13, bubbles: true, cancelable: true }));
-  }
-  function setVal(input) {
-    var setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value").set;
-    setter.call(input, pw);
-    input.dispatchEvent(new Event("input", { bubbles: true }));
-    input.dispatchEvent(new Event("change", { bubbles: true }));
-  }
-  function findEnter() {
-    var all = document.querySelectorAll('button, input[type="submit"], input[type="button"], a, [role="button"], div, span');
-    for (var i = 0; i < all.length; i++) {
-      var t = (all[i].textContent || all[i].value || "").replace(/\s/g, "");
-      if (/입장|확인|열기|로그인/.test(t) && t.length <= 12 && all[i].offsetParent !== null) return all[i];
-    }
-    return null;
-  }
-  function tryUnlock() {
-    var input = document.querySelector('input[type="password"]') || document.querySelector('input[type="text"], input:not([type])');
-    if (!input || input.offsetParent === null) { if (++tries < 60) setTimeout(tryUnlock, 100); return; }
-    input.focus(); setVal(input);
-    var btn = findEnter();
-    if (btn) btn.click();
-    else { fire(input, "keydown"); fire(input, "keypress"); fire(input, "keyup");
-      if (input.form) { input.form.requestSubmit ? input.form.requestSubmit() : input.form.submit(); } }
-    setTimeout(function () {
-      var still = document.querySelector('input[type="password"]');
-      if (still && still.offsetParent !== null && ++tries < 60) { fire(still, "keydown"); fire(still, "keyup"); }
-    }, 400);
-  }
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", tryUnlock);
-  else setTimeout(tryUnlock, 50);
 })();
 </script>
 </body>
