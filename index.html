@@ -275,9 +275,233 @@ details.more b{display:block;font-size:12px;color:var(--ink);margin-top:10px}
       </div>
     </div>
   </header>
+  <div id="mw-pins" style="max-width:1280px;margin:16px auto 0;padding:0 20px"></div>
   <main id="main"></main>
 </div>
 <div id="tip" role="tooltip"></div>
+
+<!-- ═════════════ 메모장 위젯 시작 (이 블록 전체를 index.html의 </body> 바로 앞에 붙여넣기) ═════════════ -->
+<!--
+  크리에이터 ↔ 소셜링 매니저가 주고받는 오른쪽 사이드 메모장입니다.
+  · 기존 대시보드의 코드·스타일과 겹치지 않도록 모든 이름 앞에 mw- 가 붙어 있어요.
+  · 메모는 구글 시트 "메모장" 탭에 저장됩니다 (짝이 되는 Apps Script 필요).
+  · 설정은 바로 아래 MEMO_WIDGET_CONFIG 세 줄만 고치면 됩니다.
+  · 메인 화면에 고정 공지를 보여주고 싶으면, 원하는 위치에 <div id="mw-pins"></div> 한 줄을 넣으세요.
+  · 비밀번호 잠금이 있는 대시보드라면 token을 비워 두고, 잠금 해제 후 MemoWidget.setToken('키')를 부르세요.
+    (token이 비어 있으면 메모장 버튼이 숨겨져요)
+-->
+<script>
+/* 해니크 대시보드: 비밀번호로 입장한 뒤에만 메모장이 열리도록 token은 비워 두고, 입장할 때(startApp) 아래 MEMO_TOKEN을 넣어요. */
+window.MEMO_TOKEN = '4a7849c0171316dab02fe5b3f6c3dca6898eb0cf';   // 메모장 스크립트의 TOKEN과 같은 값
+window.MEMO_WIDGET_CONFIG = {
+  url: 'https://script.google.com/macros/s/AKfycbz69tmhVX7Mt-k0eDMjSUMxlln47rPvM1r-QIjoCIxXf8Sq3DkHiSk5wT-EySna3iGZ/exec',   // Apps Script 웹 앱 주소
+  token: '',          // Apps Script의 TOKEN과 같은 값
+  creator: '해니크' // 채널명 (화면 표시용)
+};
+</script>
+<style>
+:root{--mw-bg:#FFFFFF;--mw-sunk:#F1F0EC;--mw-line:#E2E0DA;--mw-fg:#1C1B19;--mw-muted:#67635B;--mw-faint:#9C978D;--mw-accent:#2F5D50;--mw-good:#2B8A3E;--mw-good-bg:#E5F3E8;--mw-warn:#A35F00;--mw-warn-bg:#FCEFD9;--mw-bad:#C92A2A}
+@media (prefers-color-scheme: dark){:root{--mw-bg:#1B1C1A;--mw-sunk:#242522;--mw-line:#30322E;--mw-fg:#EDEBE6;--mw-muted:#A8A49B;--mw-faint:#727069;--mw-accent:#7CC4AE;--mw-good:#69DB7C;--mw-good-bg:#17301F;--mw-warn:#FFB65C;--mw-warn-bg:#3A2B12;--mw-bad:#FF8787}}
+#mw-aside,#mw-toggle,#mw-pins{font-family:"Pretendard Variable",Pretendard,-apple-system,"Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;box-sizing:border-box}
+#mw-aside *,#mw-pins *{box-sizing:border-box}
+#mw-aside{position:fixed;top:0;right:0;bottom:0;z-index:2147483000;width:min(380px,100vw);display:flex;flex-direction:column;gap:10px;background:var(--mw-bg);color:var(--mw-fg);border-left:1px solid var(--mw-line);box-shadow:-12px 0 32px rgba(0,0,0,.12);
+  padding:calc(14px + env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) calc(14px + env(safe-area-inset-bottom,0px)) 16px;transform:translateX(105%);visibility:hidden;transition:transform .22s ease,visibility .22s;font-size:14px;line-height:1.5}
+body.mw-open #mw-aside{transform:none;visibility:visible}
+@media (min-width:1280px){body.mw-open{padding-right:380px} body.mw-open #mw-aside{box-shadow:none}}
+@media (prefers-reduced-motion:reduce){#mw-aside{transition:none}}
+.mw-head{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.mw-head h3{margin:0;font-size:17px;font-weight:800}
+.mw-head p{margin:2px 0 0;font-size:12.5px;color:var(--mw-muted)}
+.mw-x{font:inherit;font-size:22px;line-height:1;background:none;border:0;color:var(--mw-muted);cursor:pointer;padding:2px 8px;border-radius:8px}
+.mw-board{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding:12px;background:var(--mw-sunk);border-radius:14px}
+.mw-empty{color:var(--mw-faint);font-size:13.5px;margin:0}
+.mw-day{align-self:center;font-size:11.5px;color:var(--mw-faint)}
+.mw-msg{max-width:88%;display:flex;flex-direction:column;gap:4px;align-self:flex-start}
+.mw-msg.mw-manager{align-self:flex-end;align-items:flex-end}
+.mw-meta{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;font-size:12px;color:var(--mw-muted)}
+.mw-meta b{color:var(--mw-fg)}
+.mw-bub{background:var(--mw-bg);border:1px solid var(--mw-line);border-radius:14px 14px 14px 4px;padding:9px 12px;font-size:14.5px;white-space:pre-line;overflow-wrap:anywhere}
+.mw-manager .mw-bub{background:color-mix(in srgb,var(--mw-accent) 14%,var(--mw-bg));border-color:color-mix(in srgb,var(--mw-accent) 30%,var(--mw-line));border-radius:14px 14px 4px 14px}
+.mw-acts{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.mw-pill{display:inline-block;font-size:11.5px;font-weight:700;padding:2px 8px;border-radius:999px;white-space:nowrap}
+.mw-ok{background:var(--mw-good-bg);color:var(--mw-good)} .mw-wait{background:var(--mw-warn-bg);color:var(--mw-warn)} .mw-neu{background:var(--mw-sunk);color:var(--mw-muted)}
+.mw-link{font:inherit;font-size:12px;font-weight:700;color:var(--mw-accent);background:none;border:1px solid var(--mw-line);border-radius:999px;padding:2px 9px;cursor:pointer}
+.mw-form{display:flex;flex-direction:column;gap:8px;margin:0}
+.mw-row{display:flex;flex-wrap:wrap;gap:6px;align-items:center;justify-content:space-between}
+.mw-who{display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:12.5px;color:var(--mw-muted)}
+.mw-chip{font:inherit;font-size:12.5px;font-weight:600;padding:5px 11px;border-radius:999px;border:1px solid var(--mw-line);background:var(--mw-bg);color:var(--mw-fg);cursor:pointer;opacity:.6}
+.mw-chip[aria-pressed="true"]{background:var(--mw-fg);color:var(--mw-bg);border-color:var(--mw-fg);opacity:1}
+.mw-pinopt{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--mw-muted)}
+.mw-form textarea{font:inherit;font-size:15px;color:var(--mw-fg);background:var(--mw-sunk);border:1px solid var(--mw-line);border-radius:12px;padding:10px 12px;min-height:76px;resize:vertical;width:100%}
+.mw-send{font:inherit;font-size:13px;font-weight:700;color:var(--mw-bg);background:var(--mw-fg);border:0;border-radius:999px;padding:8px 16px;cursor:pointer}
+.mw-send:disabled{opacity:.6;cursor:wait}
+.mw-status{font-size:12.5px;min-height:18px}
+.mw-status.mw-good{color:var(--mw-good)} .mw-status.mw-bad{color:var(--mw-bad)}
+#mw-toggle{position:fixed;z-index:2147482999;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));font-size:14px;font-weight:800;color:var(--mw-bg);background:var(--mw-fg);border:0;border-radius:999px;padding:12px 18px;box-shadow:0 8px 24px rgba(0,0,0,.2);cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+body.mw-open #mw-toggle{display:none}
+#mw-toggle[hidden],#mw-aside[hidden],#mw-aside [hidden],#mw-toggle [hidden]{display:none!important}
+.mw-badge{display:inline-grid;place-items:center;min-width:19px;height:19px;padding:0 5px;border-radius:999px;background:var(--mw-bad);color:#fff;font-size:11px;font-weight:800}
+#mw-aside button:focus-visible,#mw-toggle:focus-visible,#mw-aside textarea:focus-visible{outline:2px solid var(--mw-accent);outline-offset:2px}
+.mw-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+#mw-pins:empty{display:none}
+#mw-pins .mw-pins-title{margin:0 0 6px;font-size:13px;font-weight:700;color:var(--mw-muted)}
+#mw-pins ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+#mw-pins li{background:var(--mw-warn-bg);color:var(--mw-fg);border-radius:10px;padding:10px 12px;font-size:14px;white-space:pre-line;overflow-wrap:anywhere}
+#mw-pins li small{display:block;color:var(--mw-warn);font-weight:700;font-size:12px}
+</style>
+
+<button type="button" id="mw-toggle" aria-controls="mw-aside" aria-expanded="false" hidden>💬 메모장<span class="mw-badge" id="mw-unread" hidden></span></button>
+<aside id="mw-aside" aria-label="메모장" hidden>
+  <div class="mw-head">
+    <div><h3>메모장</h3><p id="mw-count">크리에이터와 소셜링이 주고받는 메모</p></div>
+    <button type="button" class="mw-x" id="mw-close" aria-label="메모장 닫기">×</button>
+  </div>
+  <div class="mw-board" id="mw-list" aria-live="polite"></div>
+  <form class="mw-form" id="mw-form" autocomplete="off">
+    <div class="mw-row">
+      <div class="mw-who" role="group" aria-label="보내는 사람">
+        <span>보내는 사람</span>
+        <button type="button" class="mw-chip" data-mw-role="creator" id="mw-role-creator" aria-pressed="true">크리에이터</button>
+        <button type="button" class="mw-chip" data-mw-role="manager" id="mw-role-manager" aria-pressed="false">소셜링 매니저</button>
+      </div>
+      <label class="mw-pinopt" id="mw-pinopt" hidden><input type="checkbox" id="mw-pin"> 공지로 고정</label>
+    </div>
+    <label for="mw-text" class="mw-sr">메모 내용</label>
+    <textarea id="mw-text" maxlength="2000" placeholder="메모를 입력하세요 (Ctrl + Enter로 보내기)"></textarea>
+    <div class="mw-row">
+      <span class="mw-status" id="mw-status" role="status"></span>
+      <button class="mw-send" type="submit" id="mw-send">보내기</button>
+    </div>
+  </form>
+</aside>
+
+<script>
+(function () {
+  'use strict';
+  var CFG = window.MEMO_WIDGET_CONFIG || {};
+  var url = (CFG.url || '').trim(), token = (CFG.token || '').trim(), creator = CFG.creator || '크리에이터';
+  var memos = null, err = null, timer = null;
+  var DOW = ['일', '월', '화', '수', '목', '금', '토'];
+  var KEY = 'mw:' + location.pathname + ':';   // 같은 도메인의 다른 대시보드와 저장값이 섞이지 않게
+  var role = 'creator';
+  try { role = localStorage.getItem(KEY + 'role') === 'manager' ? 'manager' : 'creator'; } catch (e) {}
+  var el = function (id) { return document.getElementById(id); };
+  var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
+  var two = function (n) { return String(n).padStart(2, '0'); };
+  var hm = function (d) { return two(d.getHours()) + ':' + two(d.getMinutes()); };
+  var fmt = function (s) { var d = new Date(s); return isNaN(d) ? esc(s) : (d.getMonth() + 1) + '/' + d.getDate() + '(' + DOW[d.getDay()] + ') ' + hm(d); };
+  var nameOf = function (r) { return r === 'manager' ? '소셜링 매니저' : creator; };
+  var ready = function () { return /^https:\/\/script\.google\.com\//.test(url) && !!token; };
+  var wide = function () { return window.matchMedia('(min-width:1280px)').matches; };
+
+  function call(method, body) {
+    var u = url + (method === 'GET' ? '?token=' + encodeURIComponent(token) + '&t=' + Date.now() : '');
+    var opt = method === 'GET' ? { cache: 'no-store' } : { method: 'POST', body: JSON.stringify(Object.assign({}, body, { token: token })) };
+    return fetch(u, opt).then(function (res) {
+      if (!res.ok) throw new Error('연결 오류 (' + res.status + ')');
+      return res.json();
+    }).then(function (j) {
+      if (!j.ok) throw new Error(j.error === 'unauthorized' ? '비밀 키가 맞지 않아요. 스크립트의 TOKEN과 같은지 확인해 주세요.' : '처리하지 못했어요.');
+      return j;
+    });
+  }
+  function load() {
+    if (!ready()) { render(); return; }
+    call('GET').then(function (j) { memos = j.memos || []; err = null; render(); })
+      .catch(function (e) { err = e.message; render(); });
+  }
+  function render() {
+    var list = el('mw-list');
+    el('mw-toggle').hidden = !ready(); el('mw-aside').hidden = !ready();
+    el('mw-role-creator').textContent = creator;
+    if (!ready()) { list.innerHTML = ''; renderPins([]); return; }
+    if (err && !memos) { list.innerHTML = '<p class="mw-empty">메모를 불러오지 못했어요. ' + esc(err) + '</p>'; return; }
+    if (!memos) { list.innerHTML = '<p class="mw-empty">메모 불러오는 중…</p>'; return; }
+    var wait = function (r) { return memos.filter(function (m) { return m.role !== r && !m.checkedAt; }).length; };
+    el('mw-count').textContent = memos.length ? creator + ' 확인 대기 ' + wait('creator') + '건 · 매니저 확인 대기 ' + wait('manager') + '건' : creator + '님과 소셜링이 주고받는 메모';
+    var unread = wait(role); el('mw-unread').hidden = !unread; el('mw-unread').textContent = unread;
+    var last = '', html = '';
+    memos.forEach(function (m) {
+      var d = new Date(m.at), day = isNaN(d) ? '' : d.getFullYear() + '.' + (d.getMonth() + 1) + '.' + d.getDate() + ' (' + DOW[d.getDay()] + ')';
+      if (day && day !== last) { html += '<div class="mw-day">' + day + '</div>'; last = day; }
+      var other = m.role === 'manager' ? creator : '매니저';
+      var st = m.checkedAt
+        ? '<span class="mw-pill mw-ok">✓ ' + esc(m.checkedBy || other) + ' 확인 ' + (isNaN(new Date(m.checkedAt)) ? '' : hm(new Date(m.checkedAt))) + '</span>'
+        : '<span class="mw-pill mw-wait">' + esc(other) + ' 확인 대기</span>';
+      html += '<div class="mw-msg mw-' + (m.role === 'manager' ? 'manager' : 'creator') + '">' +
+        '<div class="mw-meta"><b>' + esc(m.author) + '</b><span>' + (isNaN(d) ? esc(m.at) : hm(d)) + '</span>' + (m.pin ? '<span class="mw-pill mw-neu">📌 공지</span>' : '') + '</div>' +
+        '<div class="mw-bub">' + esc(m.text) + '</div>' +
+        '<div class="mw-acts">' + st +
+          (m.role !== role && !m.checkedAt ? '<button type="button" class="mw-link" data-mw-check="' + esc(m.id) + '">확인했어요</button>' : '') +
+          (role === 'manager' && m.role === 'manager' ? '<button type="button" class="mw-link" data-mw-pin="' + esc(m.id) + '" data-on="' + (m.pin ? '0' : '1') + '">' + (m.pin ? '공지 해제' : '공지로 고정') + '</button>' : '') +
+        '</div></div>';
+    });
+    list.innerHTML = html || '<p class="mw-empty">아직 메모가 없어요. 첫 메모를 남겨 보세요.</p>';
+    list.scrollTop = list.scrollHeight;
+    renderPins(memos.filter(function (m) { return m.pin; }).reverse());
+  }
+  function renderPins(pins) {
+    var box = el('mw-pins'); if (!box) return;
+    box.innerHTML = pins.length ? '<p class="mw-pins-title">📌 공지</p><ul>' + pins.map(function (m) { return '<li><small>' + fmt(m.at) + ' · ' + esc(m.author) + '</small>' + esc(m.text) + '</li>'; }).join('') + '</ul>' : '';
+  }
+  function act(body, okText) {
+    var s = el('mw-status');
+    return call('POST', body).then(function (j) {
+      memos = j.memos || []; err = null; if (okText) { s.className = 'mw-status mw-good'; s.textContent = okText; } render(); return true;
+    }).catch(function (e) { s.className = 'mw-status mw-bad'; s.textContent = '저장하지 못했어요. ' + e.message + ' 잠시 후 다시 시도해 주세요.'; return false; });
+  }
+  function setRole(r) {
+    role = r; try { localStorage.setItem(KEY + 'role', r); } catch (e) {}
+    el('mw-role-creator').setAttribute('aria-pressed', r === 'creator'); el('mw-role-manager').setAttribute('aria-pressed', r === 'manager');
+    el('mw-pinopt').hidden = r !== 'manager'; render();
+  }
+  function setOpen(open, remember) {
+    document.body.classList.toggle('mw-open', open);
+    el('mw-toggle').setAttribute('aria-expanded', open);
+    if (remember !== false) try { localStorage.setItem(KEY + 'open', open ? '1' : '0'); } catch (e) {}
+    if (open) { var l = el('mw-list'); l.scrollTop = l.scrollHeight; if (!wide()) el('mw-text').focus(); }
+    window.dispatchEvent(new Event('resize'));   // 차트가 있는 대시보드가 새 너비에 맞추도록
+  }
+
+  el('mw-form').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var text = el('mw-text').value.trim(), btn = el('mw-send'), s = el('mw-status');
+    if (!text) { s.className = 'mw-status mw-bad'; s.textContent = '내용을 입력해 주세요.'; return; }
+    btn.disabled = true; btn.textContent = '보내는 중…'; s.textContent = '';
+    act({ action: 'add', role: role, author: nameOf(role), text: text, pin: role === 'manager' && el('mw-pin').checked }, '저장했어요.')
+      .then(function (ok) { if (ok) { el('mw-text').value = ''; el('mw-pin').checked = false; } btn.disabled = false; btn.textContent = '보내기'; });
+  });
+  el('mw-text').addEventListener('keydown', function (e) { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); el('mw-form').requestSubmit(); } });
+  el('mw-list').addEventListener('click', function (e) {
+    var c = e.target.closest('[data-mw-check]'), p = e.target.closest('[data-mw-pin]');
+    if (c) { c.disabled = true; act({ action: 'check', id: c.getAttribute('data-mw-check'), by: nameOf(role) }); }
+    if (p) { p.disabled = true; act({ action: p.getAttribute('data-on') === '1' ? 'pin' : 'unpin', id: p.getAttribute('data-mw-pin') }); }
+  });
+  Array.prototype.forEach.call(document.querySelectorAll('[data-mw-role]'), function (b) { b.addEventListener('click', function () { setRole(b.getAttribute('data-mw-role')); }); });
+  el('mw-toggle').addEventListener('click', function () { setOpen(true); });
+  el('mw-close').addEventListener('click', function () { setOpen(false); el('mw-toggle').focus(); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && document.body.classList.contains('mw-open') && !wide()) setOpen(false); });
+
+  function start() {
+    setRole(role);
+    var saved = null; try { saved = localStorage.getItem(KEY + 'open'); } catch (e) {}
+    setOpen(ready() && (saved === null ? wide() : saved === '1'), false);
+    load();
+    clearInterval(timer);
+    timer = setInterval(function () { if (document.visibilityState === 'visible' && ready()) load(); }, 60 * 1000);
+  }
+  // 비밀번호 잠금이 있는 대시보드: 잠금 해제 후 MemoWidget.setToken('키') 호출
+  window.MemoWidget = {
+    setToken: function (t) { token = String(t || '').trim(); start(); },
+    setUrl: function (u) { url = String(u || '').trim(); start(); },
+    refresh: load,
+    open: function () { setOpen(true); }
+  };
+  start();
+})();
+</script>
+<!-- ═════════════ 메모장 위젯 끝 ═════════════ -->
+
 
 <script>
 /* =====================================================================
@@ -1214,6 +1438,7 @@ function startApp(){
   loadAll();
   state.timer = setInterval(loadAll, CONFIG.refreshMinutes * 60 * 1000);
   document.addEventListener('visibilitychange', () => { if (!document.hidden && state.lastSync && Date.now() - state.lastSync > 60000) loadAll(); });
+  if (window.MemoWidget && window.MEMO_TOKEN) MemoWidget.setToken(window.MEMO_TOKEN);   // 메모장 켜기
 }
 async function sha256(s){
   const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
